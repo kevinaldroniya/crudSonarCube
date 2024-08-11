@@ -1,0 +1,26 @@
+{
+  "car": {
+    "make": "Toyota",
+    "model": "Camry",
+    "year": 2021,
+    "price": 24425.50,
+    "isElectric": false,
+    "features": ["Bluetooth", "Backup Camera", "Cruise Control"],
+    "engineSpecs": {
+      "type": "Gasoline",
+      "horsepower": 203,
+      "torque": 184
+    },
+    "previousOwners": 1,
+    "warranty": {
+      "basic": "3 years/36,000 miles",
+      "powertrain": "5 years/60,000 miles"
+    },
+    "maintenanceDates": ["2022-06-15", "2023-01-10"],
+    "dimensions": {
+      "length": 192.1,
+      "width": 72.4,
+      "height": 56.9
+    }
+  }
+}
