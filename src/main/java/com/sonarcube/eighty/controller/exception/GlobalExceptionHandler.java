@@ -1,10 +1,16 @@
 package com.sonarcube.eighty.controller.exception;
 
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.sonarcube.eighty.dto.ErrorDetails;
 import com.sonarcube.eighty.exception.ResourceConversionException;
 import com.sonarcube.eighty.exception.ResourceNotFoundException;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.context.request.WebRequest;
@@ -12,7 +18,9 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 import java.util.Date;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @ControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
@@ -61,5 +69,81 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 .exception(e.getClass().getName())
                 .build();
         return new ResponseEntity<>(errorDetails, HttpStatus.BAD_REQUEST);
+    }
+
+//    @ExceptionHandler(MethodArgumentNotValidException.class)
+//    public ResponseEntity<ErrorDetails> handleMethodArgumentNotValid(MethodArgumentNotValidException e, WebRequest webRequest) {
+//        // Extracting field errors
+//        List<String> errorMessages = e.getBindingResult()
+//                .getFieldErrors()
+//                .stream()
+//                .map(FieldError::getDefaultMessage)
+//                .toList();
+//
+//        // Join all error messages into a single string or use another format like JSON array
+//        String message = String.join(", ", errorMessages);
+//
+//        ErrorDetails errorDetails = ErrorDetails.builder()
+//                .timestamp(new Date())
+//                .status("400")
+//                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
+//                .message(message)
+//                .details("Validation failed for one or more fields")
+//                .path(webRequest.getDescription(false))
+//                .exception(e.getClass().getName())
+//                .build();
+//        return new ResponseEntity<>(errorDetails, HttpStatus.BAD_REQUEST);
+//    }
+
+    @Override
+    protected ResponseEntity<Object> handleHttpMessageNotReadable(HttpMessageNotReadableException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+
+        String errorMessage = getString(ex);
+        ErrorDetails errorDetails = ErrorDetails.builder()
+                .timestamp(new Date())
+                .status(String.valueOf(status.value()))
+                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
+                .message("Malformed JSON request")
+                .details(errorMessage)
+                .path(request.getDescription(false).replace("uri=", ""))
+                .exception(ex.getClass().getName())
+                .build();
+        return new ResponseEntity<>(errorDetails, HttpStatus.BAD_REQUEST);
+    }
+
+    @Override
+    protected ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+        String message = ex.getBindingResult()
+                .getFieldErrors()
+                .stream()
+                .map(error -> String.format("'%s' %s", error.getField(), error.getDefaultMessage()))
+                .collect(Collectors.joining(", "));
+
+        ErrorDetails errorDetails = ErrorDetails.builder()
+                .timestamp(new Date())
+                .status("400")
+                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
+                .message("Field Validation Error")
+                .details(message)
+                .path(request.getDescription(false))
+                .exception(ex.getClass().getName())
+                .build();
+
+        return new ResponseEntity<>(errorDetails, HttpStatus.BAD_REQUEST);
+    }
+
+    private static String getString(HttpMessageNotReadableException ex) {
+        String message = "Your request could not be processed due to invalid input.";
+
+        // Try to extract the specific field name and invalid value from the exception message
+        if (ex.getCause() instanceof JsonMappingException jsonEx) {
+            List<JsonMappingException.Reference> references = jsonEx.getPath();
+
+            if (!references.isEmpty()) {
+                String fieldName = references.get(0).getFieldName();
+                message = String.format("Invalid value provided for field '%s'. Please ensure the value is correct and of the right type.", fieldName);
+            }
+        }
+        return message;
     }
 }
