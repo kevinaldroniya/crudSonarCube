@@ -1,5 +1,7 @@
 package com.sonarcube.eighty.dto;
 
+import com.sonarcube.eighty.util.annotation.NotEmptyDimensions;
+import com.sonarcube.eighty.util.annotation.OnlyBoolean;
 import jakarta.annotation.Nullable;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
@@ -12,32 +14,46 @@ import java.util.List;
 @Getter
 @Setter
 @AllArgsConstructor
-@NoArgsConstructor
 @Builder
 public class CarDto {
     @Nullable
     private Long id;
+
+    @NotEmpty
     private String make;
+
+    @NotEmpty
     private String model;
+
     @Max(value = 2024)
+    @Min(value = 1950)
     private int year;
+
     @Positive
     private double price;
+
+//    @OnlyBoolean
     private boolean isElectric;
-    @NotEmpty
-    private List<String> features;
+
+    @Size(min = 2, max = 10)
+    private List<@NotNull String> features;
+
     @Valid
     @NotNull
     private Engine engine;
+
     @Min(value = 0)
     private int previousOwner;
+
     @Valid
     @NotNull
     private Warranty warranty;
-    @NotEmpty
+
     @NotNull
-    private List<LocalDate> maintenanceDates;
+    @Size(min = 2, max = 10)
+    private List<@NotNull LocalDate> maintenanceDates;
+
     @Valid
-    @NotNull
+    @NotEmptyDimensions
     private Dimensions dimensions;
 }

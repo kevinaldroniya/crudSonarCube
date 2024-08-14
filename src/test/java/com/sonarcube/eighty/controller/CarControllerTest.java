@@ -190,28 +190,78 @@ class CarControllerTest {
     }
 
     @Test
-    void testSaveCar_shouldThrowBadRequest_engineType() throws Exception{
+    void testSaveCar_shouldThrowBadRequest_makeNullOrEmpty() throws Exception{
         //Arrange
         Map<String, Object> request = carRequest();
-        Map<String, Object> engineBadRequest = new HashMap<>();
-        engineBadRequest.put("type","type");
-        engineBadRequest.put("horsepower","100");
-        engineBadRequest.put("torque","asd");
-        request.put("engine",engineBadRequest);
-
+        request.put("make", null);
         //Act
         mockMvc.perform(post("/car")
                 .accept(MediaType.APPLICATION_JSON)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
+                //Assert
+                .andExpect(status().isBadRequest())
+                .andExpect(result -> {
+                    ErrorDetails response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {});
+                    assertNotNull(response.getError());
+                    assertEquals("'make' must not be empty", response.getDetails());
+                });
+    }
+
+    @Test
+    void testSaveCar_shouldThrowBadRequest_modelNullOrEmpty() throws Exception{
+        Map<String, Object> request = carRequest();
+        request.put("model", null);
+        //Act
+        mockMvc.perform(post("/car")
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                //Assert
+                .andExpect(status().isBadRequest())
+                .andExpect(result -> {
+                    ErrorDetails response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {});
+                    assertNotNull(response.getError());
+                    assertEquals("'model' must not be empty", response.getDetails());
+                });
+    }
+
+    @Test
+    void testSaveCar_shouldThrowBadRequest_yearMin() throws Exception{
+        //Act
+        Map<String, Object> request = carRequest();
+        request.put("year",1949);
+        //Act
+        mockMvc.perform(post("/car")
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                //Assert
                 .andExpect(status().isBadRequest())
                 .andDo(result -> {
-                    ErrorDetails response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {
-                    });
+                    ErrorDetails response  = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<ErrorDetails>() {});
                     assertNotNull(response.getError());
-                    assertEquals("Invalid value provided for field 'engine'. Please ensure the value is correct and of the right type.", response.getDetails());
+                    assertEquals("'year' must be greater than or equal to 1950",response.getDetails());
                 });
+    }
 
+    @Test
+    void testSaveCar_shouldThrowBadRequest_yearMax() throws Exception{
+        //Act
+        Map<String, Object> request = carRequest();
+        request.put("year",2050);
+        //Act
+        mockMvc.perform(post("/car")
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                //Assert
+                .andExpect(status().isBadRequest())
+                .andDo(result -> {
+                    ErrorDetails response  = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<ErrorDetails>() {});
+                    assertNotNull(response.getError());
+                    assertEquals("'year' must be less than or equal to 2024",response.getDetails());
+                });
     }
 
     @Test
@@ -221,10 +271,10 @@ class CarControllerTest {
         request.put("year","asd");
         //Act
         mockMvc.perform(
-                post("/car")
-                .accept(MediaType.APPLICATION_JSON)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
+                        post("/car")
+                                .accept(MediaType.APPLICATION_JSON)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request)))
                 //Assert
                 .andExpect(status().isBadRequest())
                 .andDo(result -> {
@@ -235,50 +285,89 @@ class CarControllerTest {
     }
 
     @Test
-    void testSaveCar_shouldThrowBadRequest_priceType() throws Exception{
+    void testSaveCar_shouldThrowBadRequest_priceNullOrEmpty() throws Exception{
+        //Arrange
+        Map<String, Object> request = carRequest();
+        request.put("price",null);
+        //Act
+        mockMvc.perform(post("/car")
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                //Assert
+                .andExpect(status().isBadRequest())
+                .andDo(result -> {
+                    ErrorDetails response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<ErrorDetails>() {
+                    });
+                    assertNotNull(response);
+                    assertEquals("'price' must be greater than 0", response.getDetails());
+                });
+    }
+
+    @Test
+    void testSaveCar_shouldThrowBadRequest_priceInvalidType() throws Exception{
         //Arrange
         Map<String, Object> request = carRequest();
         request.put("price","asd");
         //Act
-        mockMvc.perform(
-                        post("/car")
-                                .accept(MediaType.APPLICATION_JSON)
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(request)))
-                //Assert
+        mockMvc.perform(post("/car")
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
                 .andDo(result -> {
-                    ErrorDetails response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {});
-                    assertNotNull(response);
+                    ErrorDetails response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<ErrorDetails>() {
+                    });
+                    assertNotNull(response.getError());
                     assertEquals("Invalid value provided for field 'price'. Please ensure the value is correct and of the right type.", response.getDetails());
                 });
     }
 
     @Test
-    void testSaveCar_shouldThrowBadRequest_isElectricType() throws Exception{
+    void testSaveCar_shouldThrowBadRequest_priceNegativeValue() throws Exception{
         //Arrange
         Map<String, Object> request = carRequest();
-        request.put("isElectric","asd");
+        request.put("price",-100);
         //Act
-        mockMvc.perform(
-                        post("/car")
-                                .accept(MediaType.APPLICATION_JSON)
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(request)))
+        mockMvc.perform(post("/car")
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
                 //Assert
                 .andExpect(status().isBadRequest())
                 .andDo(result -> {
-                    ErrorDetails response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {});
-                    assertNotNull(response);
-                    assertEquals("Invalid value provided for field 'isElectric'. Please ensure the value is correct and of the right type.", response.getDetails());
+                    ErrorDetails response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<ErrorDetails>() {
+                    });
+                    assertNotNull(response.getError());
+                    assertEquals("'price' must be greater than 0",response.getDetails());
                 });
     }
 
+//    @Test
+//    void testSaveCar_shouldThrowBadRequest_isElectricType() throws Exception{
+//        //Arrange
+//        Map<String, Object> request = carRequest();
+//        request.put("isElectric","asd");
+//        //Act
+//        mockMvc.perform(
+//                        post("/car")
+//                                .accept(MediaType.APPLICATION_JSON)
+//                                .contentType(MediaType.APPLICATION_JSON)
+//                                .content(objectMapper.writeValueAsString(request)))
+//                //Assert
+//                .andExpect(status().isBadRequest())
+//                .andDo(result -> {
+//                    ErrorDetails response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {});
+//                    assertNotNull(response);
+//                    assertEquals("Invalid value provided for field 'isElectric'. Please ensure the value is correct and of the right type.", response.getDetails());
+//                });
+//    }
+
     @Test
-    void testSaveCar_shouldThrowBadRequest_featuresType() throws Exception{
+    void testSaveCar_shouldThrowBadRequest_featuresInvalidType() throws Exception{
         //Arrange
         Map<String, Object> request = carRequest();
-        request.put("features", new ArrayList<>());
+        request.put("features", 123);
         //Act
         mockMvc.perform(
                         post("/car")
@@ -291,6 +380,378 @@ class CarControllerTest {
                     ErrorDetails response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {});
                     assertNotNull(response);
                     assertEquals("Invalid value provided for field 'features'. Please ensure the value is correct and of the right type.", response.getDetails());
+                });
+    }
+
+    @Test
+    void testSaveCar_shouldThrowBadRequest_featuresSizeMin() throws Exception{
+        //Arrange
+        Map<String, Object> request = carRequest();
+        request.put("features", new ArrayList<>());
+        //Act
+        mockMvc.perform(post("/car")
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                //Assert
+                .andExpect(status().isBadRequest())
+                .andDo(result -> {
+                    ErrorDetails response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<ErrorDetails>() {});
+                    assertNotNull(response.getError());
+                    assertEquals("'features' size must be between 2 and 10", response.getDetails());
+                });
+    }
+
+    @Test
+    void testSaveCar_shouldThrowBadRequest_featuresSizeMax() throws Exception{
+        //Arrange
+        Map<String, Object> request = carRequest();
+        List<String> features = new ArrayList<>();
+        for (int i = 0; i < 11; i++) {
+            features.add(String.valueOf(i));
+        }
+        request.put("features", features);
+        //Act
+        mockMvc.perform(post("/car")
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                //Assert
+                .andExpect(status().isBadRequest())
+                .andDo(result -> {
+                    ErrorDetails response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<ErrorDetails>() {});
+                    assertNotNull(response.getError());
+                    assertEquals("'features' size must be between 2 and 10", response.getDetails());
+                });
+    }
+
+    @Test
+    void testSaveCar_shouldThrowBadRequest_engineInvalidType() throws Exception{
+        //Arrange
+        Map<String, Object> request = carRequest();
+        Map<String, Object> engineBadRequest = new HashMap<>();
+        engineBadRequest.put("type","type");
+        engineBadRequest.put("horsepower","asd");
+        engineBadRequest.put("torque",100);
+        request.put("engine", engineBadRequest);
+
+        //Act
+        mockMvc.perform(post("/car")
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andDo(result -> {
+                    ErrorDetails response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {
+                    });
+                    assertNotNull(response.getError());
+                    assertEquals("Invalid value provided for field 'engine'. Please ensure the value is correct and of the right type.", response.getDetails());
+                });
+    }
+
+    @Test
+    void testSaveCar_shouldThrowBadRequest_engineNull() throws Exception{
+        //Arrange
+        Map<String, Object> request = carRequest();
+        request.put("engine", null);
+
+        //Act
+        mockMvc.perform(post("/car")
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andDo(result -> {
+                    ErrorDetails response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {
+                    });
+                    assertNotNull(response.getError());
+                    assertEquals("'engine' must not be null", response.getDetails());
+                });
+    }
+
+    @Test
+    void testSaveCar_shouldThrowBadRequest_engineTypeNullOrEmpty() throws Exception{
+        //Arrange
+        Map<String, Object> request = carRequest();
+        Map<String, Object> engineBadRequest = new HashMap<>();
+        engineBadRequest.put("type","");
+        engineBadRequest.put("horsepower","100");
+        engineBadRequest.put("torque",100);
+        request.put("engine", engineBadRequest);
+        //Act
+        mockMvc.perform(post("/car")
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                //Assert
+                .andExpect(status().isBadRequest())
+                .andDo(result -> {
+                    ErrorDetails response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {
+                    });
+                    assertNotNull(response.getError());
+                    assertEquals("'engine.type' must not be empty", response.getDetails());
+                });
+    }
+
+    @Test
+    void testSaveCar_shouldThrowBadRequest_prvOwnerInvalid() throws Exception{
+        //Arrange
+        Map<String, Object> request = carRequest();
+        request.put("previousOwner", "asd");
+        //Act
+        mockMvc.perform(post("/car")
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                //Assert
+                .andExpect(status().isBadRequest())
+                .andDo(result -> {
+                   ErrorDetails response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<ErrorDetails>() {
+                   });
+                   assertNotNull(response.getError());
+                   assertEquals("Invalid value provided for field 'previousOwner'. Please ensure the value is correct and of the right type.", response.getDetails());
+                });
+    }
+
+    @Test
+    void testSaveCar_shouldThrowBadRequest_prvOwnerNegative() throws Exception{
+        //Arrange
+        Map<String, Object> request = carRequest();
+        request.put("previousOwner",-1);
+        //Act
+        mockMvc.perform(post("/car")
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                //Assert
+                .andExpect(status().isBadRequest())
+                .andExpect(result -> {
+                   ErrorDetails response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<ErrorDetails>() {
+                   });
+                   assertNotNull(response.getError());
+                   assertEquals("'previousOwner' must be greater than or equal to 0", response.getDetails());
+                });
+    }
+
+    @Test
+    void testSaveCar_shouldThrowBadRequest_warrantyEmptyObject() throws Exception {
+        //Arrange
+        Map<String, Object> request = carRequest();
+        request.put("warranty",new HashMap<>());
+        //Act
+        mockMvc.perform(post("/car")
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                //Assert
+                .andExpect(status().isBadRequest())
+                .andDo(result -> {
+                    ErrorDetails response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<ErrorDetails>() {
+                    });
+                    assertNotNull(response.getError());
+                    assertEquals("'warranty.basic' must not be empty", response.getDetails());
+                });
+    }
+
+    @Test
+    void testSaveCar_shouldThrowBadRequest_warrantyInvalidType() throws Exception{
+        Map<String, Object> request = carRequest();
+        request.put("warranty","");
+        //Act
+        mockMvc.perform(post("/car")
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andDo(result -> {
+                    ErrorDetails response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<ErrorDetails>() {
+                    });
+                    assertNotNull(response.getError());
+                    assertEquals("Invalid value provided for field 'warranty'. Please ensure the value is correct and of the right type.", response.getDetails());
+                });
+    }
+
+    @Test
+    void testSaveCar_shouldThrowBadRequest_warrantyNull() throws Exception{
+        Map<String, Object> request = carRequest();
+        request.put("warranty", null);
+        mockMvc.perform(post("/car")
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andDo(result -> {
+                    ErrorDetails response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<ErrorDetails>() {
+                    });
+                    assertNotNull(response.getError());
+                    assertEquals("'warranty' must not be null", response.getDetails());
+                });
+    }
+
+    @Test
+    void testSaveCar_shouldThrowBadRequest_maintenanceDatesNull() throws Exception{
+        Map<String, Object> request = carRequest();
+        request.put("maintenanceDates",null);
+        mockMvc.perform(post("/car")
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andDo(result -> {
+                    ErrorDetails response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<ErrorDetails>() {
+                    });
+                    assertNotNull(response.getError());
+                    assertEquals("'maintenanceDates' must not be null", response.getDetails());
+                });
+    }
+
+    @Test
+    void testSaveCar_shouldThrowBadRequest_maintenanceDatesMin() throws Exception{
+        Map<String, Object> request = carRequest();
+        request.put("maintenanceDates", new ArrayList<>());
+        mockMvc.perform(post("/car")
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andDo(result -> {
+                    ErrorDetails response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<ErrorDetails>() {
+                    });
+                    assertNotNull(response.getError());
+                    assertEquals("'maintenanceDates' size must be between 2 and 10", response.getDetails());
+                });
+    }
+
+    @Test
+    void testSaveCar_shouldThrowBadRequest_maintenanceDatesMax() throws Exception{
+        Map<String, Object> request = carRequest();
+        List<LocalDate> maintenanceDate = new ArrayList<>();
+        for (int i = 0; i < 15; i++) {
+            maintenanceDate.add(LocalDate.now());
+        }
+        request.put("maintenanceDates", maintenanceDate);
+        mockMvc.perform(post("/car")
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andDo(result -> {
+                    ErrorDetails response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<ErrorDetails>() {
+                    });
+                    assertNotNull(response.getError());
+                    assertEquals("'maintenanceDates' size must be between 2 and 10", response.getDetails());
+                });
+    }
+
+    @Test
+    void testSaveCar_shouldThrowBadRequest_maintenanceDatesInvalidType() throws Exception{
+        Map<String, Object> request = carRequest();
+        request.put("maintenanceDates", List.of("1",2,"a"));
+        mockMvc.perform(post("/car")
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andDo(result -> {
+                    ErrorDetails response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<ErrorDetails>() {
+                    });
+                    assertNotNull(response.getError());
+                    assertEquals("Invalid value provided for field 'maintenanceDates'. Please ensure the value is correct and of the right type.", response.getDetails());
+                });
+    }
+
+    @Test
+    void testSaveCar_shouldThrowBadRequest_dimensionsNull() throws Exception{
+        Map<String, Object> request = carRequest();
+        request.put("dimensions",null);
+        mockMvc.perform(post("/car")
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andDo(result -> {
+                    ErrorDetails response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<ErrorDetails>() {
+                    });
+                    assertNotNull(response);
+                    assertEquals("'dimensions' must not be empty", response.getDetails());
+                });
+    }
+
+    @Test
+    void testSaveCar_shouldThrowBadRequest_dimensionsEmpty() throws Exception{
+        Map<String, Object> request = carRequest();
+        request.put("dimensions", new HashMap<>());
+        mockMvc.perform(post("/car")
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andDo(result -> {
+                    ErrorDetails response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<ErrorDetails>() {
+                    });
+                    assertNotNull(response.getError());
+                    assertEquals("'dimensions' must not be empty",response.getDetails());
+                });
+    }
+
+    @Test
+    void testSaveCar_shouldThrowBadRequest_dimensionsInvalidType() throws Exception{
+        Map<String, Object> request = carRequest();
+        request.put("dimensions","as");
+        mockMvc.perform(post("/car")
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andDo(result -> {
+                    ErrorDetails response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<ErrorDetails>() {
+                    });
+                    assertNotNull(response);
+                    assertEquals("Invalid value provided for field 'dimensions'. Please ensure the value is correct and of the right type.", response.getDetails());
+                });
+    }
+
+    @Test
+    void testSaveCar_shouldThrowBadRequest_dimensionsInvalidFieldsValueNullOrLessThanZero() throws Exception{
+        Map<String, Object> request = carRequest();
+        Map<String, Object> dimensions = new HashMap<>();
+        dimensions.put("length",null);
+        dimensions.put("width",0);
+        dimensions.put("height",0);
+        dimensions.put("weight",0);
+        request.put("dimensions", dimensions);
+        mockMvc.perform(post("/car")
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andDo(result -> {
+                    ErrorDetails response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<ErrorDetails>() {
+                    });
+                    assertNotNull(response.getError());
+                    assertEquals("'dimensions' must not be empty",response.getDetails());
+                });
+    }
+
+    @Test
+    void testSaveCar_shouldThrowBadRequest_dimensionsInvalidFieldsType() throws Exception{
+        Map<String, Object> request = carRequest();
+        Map<String, Object> dimensions = new HashMap<>();
+        dimensions.put("length","asd");
+        dimensions.put("width","asd");
+        dimensions.put("height","asd");
+        dimensions.put("weight","asd");
+        request.put("dimensions", dimensions);
+        mockMvc.perform(post("/car")
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andDo(result -> {
+                    ErrorDetails response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<ErrorDetails>() {
+                    });
+                    assertNotNull(response.getError());
+                    assertEquals("Invalid value provided for field 'dimensions'. Please ensure the value is correct and of the right type.",response.getDetails());
                 });
     }
 

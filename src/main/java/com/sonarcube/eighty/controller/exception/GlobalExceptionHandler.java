@@ -2,6 +2,7 @@ package com.sonarcube.eighty.controller.exception;
 
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.sonarcube.eighty.dto.ErrorDetails;
+import com.sonarcube.eighty.exception.InvalidRequestException;
 import com.sonarcube.eighty.exception.ResourceConversionException;
 import com.sonarcube.eighty.exception.ResourceNotFoundException;
 import org.springframework.http.HttpHeaders;
@@ -65,6 +66,20 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
                 .message(e.getErrorCode())
                 .details(errorMessage)
+                .path(webRequest.getDescription(false))
+                .exception(e.getClass().getName())
+                .build();
+        return new ResponseEntity<>(errorDetails, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(InvalidRequestException.class)
+    public ResponseEntity<ErrorDetails> handleInvalidRequestException(InvalidRequestException e, WebRequest webRequest){
+        ErrorDetails errorDetails = ErrorDetails.builder()
+                .timestamp(new Date())
+                .status("400")
+                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
+                .message("Field Validation Error")
+                .details(e.getMessage())
                 .path(webRequest.getDescription(false))
                 .exception(e.getClass().getName())
                 .build();

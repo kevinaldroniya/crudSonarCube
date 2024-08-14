@@ -6,17 +6,21 @@ import com.sonarcube.eighty.dto.CarDto;
 import com.sonarcube.eighty.dto.Dimensions;
 import com.sonarcube.eighty.dto.Engine;
 import com.sonarcube.eighty.dto.Warranty;
+import com.sonarcube.eighty.exception.InvalidRequestException;
 import com.sonarcube.eighty.exception.ResourceConversionException;
 import com.sonarcube.eighty.exception.ResourceNotFoundException;
 import com.sonarcube.eighty.model.Car;
 import com.sonarcube.eighty.repository.CarRepository;
 import com.sonarcube.eighty.service.CarService;
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 @Service
 @AllArgsConstructor
@@ -55,10 +59,12 @@ public class CarServiceImpl implements CarService {
     }
 
     @Override
-    public CarDto saveCar(CarDto carDto) {
+    public CarDto saveCar(@Valid CarDto carDto) {
 //        if (carRepository.existsById(carDto.getId())) {
 //            throw new ResourceAlreadyExistsException("Car", "id", carDto.getId());
 //        }
+        validateRequest(carDto);
+
 
         try {
             Car car = convertToCar(carDto);
@@ -139,5 +145,92 @@ public class CarServiceImpl implements CarService {
                 .maintenanceDates(maintenanceDates)
                 .dimensions(dimensions)
                 .build();
+    }
+
+    private void validateRequest(CarDto carDto){
+        validateMake(carDto.getMake());
+        validateModel(carDto.getModel());
+        validateYear(carDto.getYear());
+        validatePrice(carDto.getPrice());
+        validateFeatures(carDto.getFeatures());
+        validateEngine(carDto.getEngine());
+        validatePreviousOwner(carDto.getPreviousOwner());
+        validateWarranty(carDto.getWarranty());
+        validateDimensions(carDto.getDimensions());
+        Object warrantyObj = carDto.getWarranty();
+    }
+
+    private void validateMake(String make){
+        if (make.isEmpty() || make.isBlank()){
+            throw new InvalidRequestException("'make' must not be empty");
+        }
+    }
+
+    private void validateModel(String model){
+        if (model.isEmpty()||model.isBlank()){
+            throw new InvalidRequestException("'model' must not be empty");
+        }
+    }
+
+    private void validateYear(int year){
+        if (year < 1950){
+            throw new InvalidRequestException("'year' must be greater than or equal to 1950");
+        }else if (year > 2024){
+            throw new InvalidRequestException("'year' must be less than or equal to 2024");
+        }
+    }
+
+    private void validatePrice(double price){
+        if (price <= 0 ){
+            throw new InvalidRequestException("'price' must be greater than 0");
+        }
+    }
+
+    private void validateFeatures(List<String> features){
+        if (features.isEmpty() || features.size() >10){
+            throw new InvalidRequestException("'features' size must be between 2 and 10");
+        }
+    }
+
+    private static void validateEngine(Engine engine){
+        if (Objects.isNull(engine)){
+            throw new InvalidRequestException("'engine' must not be null");
+        } else if (engine.getType().isEmpty() || engine.getType().isBlank()) {
+            throw new InvalidRequestException("'engine.type' must not be empty");
+        } else if (engine.getTorque() < 0) {
+            throw new InvalidRequestException("'engine.torque' must be greater than or equal to 0");
+        } else if (engine.getHorsepower() < 0) {
+            throw new InvalidRequestException("'engine.horsepower' must be greater than or equal to 0");
+        }
+    }
+
+    private static void validatePreviousOwner(int previousOwner){
+        if (previousOwner < 0 ){
+            throw new InvalidRequestException("'previousOwner' must be greater than or equal to 0");
+        }
+    }
+
+    private static void validateWarranty(Warranty warranty){
+        if (Objects.isNull(warranty)) {
+            throw new InvalidRequestException("'warranty' must not be null");
+        } else if (warranty.getBasic() == null || warranty.getBasic().isEmpty() || warranty.getBasic().isBlank()) {
+            throw new InvalidRequestException("'warranty.basic' must not be empty");
+        } else if (warranty.getPowertrain() == null || warranty.getPowertrain().isEmpty() || warranty.getPowertrain().isBlank()) {
+            throw new InvalidRequestException("'warranty.powertrain' must not be empty");
+        }
+    }
+
+    private static void validateDimensions(Dimensions dimensions){
+        if (Objects.isNull(dimensions)){
+            throw new InvalidRequestException("'dimensions' must not be empty");
+        } else if (dimensions.getLength() < 0) {
+            throw new InvalidRequestException("'dimensions.length' must be greater than or equal to 0");
+        } else if (dimensions.getWidth() < 0) {
+            throw new InvalidRequestException("'dimensions.width' must be greater than or equal to 0");
+        } else if (dimensions.getHeight() < 0) {
+            throw new InvalidRequestException("'dimensions.height' must be greater than or equal to 0");
+        } else if (dimensions.getWeight() < 0) {
+            throw new InvalidRequestException("'dimensions.weight' must be greater than or equal to 0");
+        }
     }
 }
