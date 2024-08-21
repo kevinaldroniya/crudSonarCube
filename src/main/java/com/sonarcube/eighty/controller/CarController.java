@@ -1,7 +1,6 @@
 package com.sonarcube.eighty.controller;
 
 import com.sonarcube.eighty.dto.CarDto;
-import com.sonarcube.eighty.model.Car;
 import com.sonarcube.eighty.service.CarService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,8 +15,12 @@ import java.util.List;
 @RequestMapping("/car")
 public class CarController {
 
+    private final CarService carService;
+
     @Autowired
-    private CarService carService;
+    public CarController(CarService carService) {
+        this.carService = carService;
+    }
 
     @GetMapping
     public ResponseEntity<List<CarDto>> getAllCars() {
@@ -41,5 +44,24 @@ public class CarController {
     public ResponseEntity<CarDto> saveCar(@Valid @RequestBody CarDto carDto){
         CarDto savedCar = carService.saveCar(carDto);
         return new ResponseEntity<>(savedCar, HttpStatus.CREATED);
+    }
+
+    @PutMapping(
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE,
+            path = "/{id}"
+    )
+    public ResponseEntity<CarDto> updateCar(@PathVariable("id") Long id, @Valid @RequestBody CarDto carDto){
+        CarDto updateCar = carService.updateCar(id, carDto);
+        return new ResponseEntity<>(updateCar, HttpStatus.OK);
+    }
+
+    @DeleteMapping(
+            path = "/{id}",
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    public ResponseEntity<String> deleteCar(@PathVariable("id") Long id){
+        String deleteCar = carService.deleteCar(id);
+        return new ResponseEntity<>(deleteCar, HttpStatus.OK);
     }
 }

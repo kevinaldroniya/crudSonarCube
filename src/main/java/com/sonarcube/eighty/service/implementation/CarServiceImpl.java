@@ -17,10 +17,7 @@ import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 @Service
 @AllArgsConstructor
@@ -28,6 +25,8 @@ public class CarServiceImpl implements CarService {
 
     private final CarRepository carRepository;
     private final ObjectMapper objectMapper;
+    private static final String CAR_DTO = "CarDto";
+    private static final String CAR = "Car";
 
     @Override
     public List<CarDto> getAllCars() {
@@ -38,7 +37,7 @@ public class CarServiceImpl implements CarService {
                     try {
                         return convertToDto(car);
                     } catch (JsonProcessingException e) {
-                        throw new ResourceConversionException("Car", "CarDto");
+                        throw new ResourceConversionException(CAR, CAR_DTO);
                     }
                 })
                 .toList();
@@ -48,48 +47,51 @@ public class CarServiceImpl implements CarService {
     @Override
     public CarDto getCarById(Long id) {
         Car car = carRepository.findById(id).orElseThrow(
-                () -> new ResourceNotFoundException("Car", "id", id)
+                () -> new ResourceNotFoundException(CAR, "id", id)
         );
 
         try {
             return convertToDto(car);
         } catch (JsonProcessingException e) {
-            throw new ResourceConversionException("Car", "CarDto");
+            throw new ResourceConversionException(CAR, CAR_DTO);
         }
     }
 
     @Override
     public CarDto saveCar(@Valid CarDto carDto) {
-//        if (carRepository.existsById(carDto.getId())) {
-//            throw new ResourceAlreadyExistsException("Car", "id", carDto.getId());
-//        }
         validateRequest(carDto);
-
-
         try {
             Car car = convertToCar(carDto);
-            carRepository.save(car);
-            return convertToDto(car);
+            Car saved = carRepository.save(car);
+            return convertToDto(saved);
         } catch (JsonProcessingException e) {
-            throw new ResourceConversionException("Car", "CarDto");
+            throw new ResourceConversionException(CAR, CAR_DTO);
         }
     }
 
     @Override
-    public Car updateCar(Long id, Car car) {
-        return carRepository.findById(id).map(existingCar -> {
-            Car updatedCar = updateCarDetails(existingCar, car);
-            return carRepository.save(updatedCar);
-        }).orElseThrow(() -> new ResourceNotFoundException("Car", "id", id));
+    public CarDto updateCar(Long id, CarDto carDto) {
+        Car carById = carRepository.findById(id).orElseThrow(
+                () -> new ResourceNotFoundException(CAR, "id", id)
+        );
+        validateRequest(carDto);
+        try {
+            Car convertedToCar = convertToCar(carDto);
+            Car updateCar = updateCarDetails(carById, convertedToCar);
+            Car save = carRepository.save(updateCar);
+            return convertToDto(save);
+        }catch (JsonProcessingException e){
+            throw new ResourceConversionException(CAR_DTO, CAR);
+        }
     }
 
     @Override
-    public boolean deleteCar(Long id) {
+    public String deleteCar(Long id) {
         if (carRepository.existsById(id)) {
             carRepository.deleteById(id);
-            return true;
+            return "Car with id: " + id + " deleted successfully";
         } else {
-            throw new ResourceNotFoundException("Car", "id", id);
+            throw new ResourceNotFoundException(CAR, "id", id);
         }
     }
 
@@ -156,18 +158,26 @@ public class CarServiceImpl implements CarService {
         validateEngine(carDto.getEngine());
         validatePreviousOwner(carDto.getPreviousOwner());
         validateWarranty(carDto.getWarranty());
+        validateMaintenanceDates(carDto.getMaintenanceDates());
         validateDimensions(carDto.getDimensions());
-        Object warrantyObj = carDto.getWarranty();
+    }
+
+    private void validateMaintenanceDates(List<LocalDate> maintenanceDates) {
+        if (Objects.isNull(maintenanceDates)){
+            throw new InvalidRequestException("'maintenanceDates' must not be null");
+        } else if (maintenanceDates.size() < 2 || maintenanceDates.size() > 10) {
+            throw new InvalidRequestException("'maintenanceDates' must be between 2 and 10");
+        }
     }
 
     private void validateMake(String make){
-        if (make.isEmpty() || make.isBlank()){
+        if (Objects.isNull(make) || make.isEmpty() || make.isBlank()){
             throw new InvalidRequestException("'make' must not be empty");
         }
     }
 
     private void validateModel(String model){
-        if (model.isEmpty()||model.isBlank()){
+        if (Objects.isNull(model) || model.isEmpty()||model.isBlank()){
             throw new InvalidRequestException("'model' must not be empty");
         }
     }
@@ -187,7 +197,7 @@ public class CarServiceImpl implements CarService {
     }
 
     private void validateFeatures(List<String> features){
-        if (features.isEmpty() || features.size() >10){
+        if (Objects.isNull(features) || features.isEmpty() || features.size() >10){
             throw new InvalidRequestException("'features' size must be between 2 and 10");
         }
     }
@@ -195,7 +205,7 @@ public class CarServiceImpl implements CarService {
     private static void validateEngine(Engine engine){
         if (Objects.isNull(engine)){
             throw new InvalidRequestException("'engine' must not be null");
-        } else if (engine.getType().isEmpty() || engine.getType().isBlank()) {
+        } else if (Objects.isNull(engine.getType())|| engine.getType().isEmpty() || engine.getType().isBlank()) {
             throw new InvalidRequestException("'engine.type' must not be empty");
         } else if (engine.getTorque() < 0) {
             throw new InvalidRequestException("'engine.torque' must be greater than or equal to 0");
