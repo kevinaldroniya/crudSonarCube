@@ -1,7 +1,6 @@
 package com.sonarcube.eighty.dto;
 
 import com.sonarcube.eighty.util.annotation.NotEmptyDimensions;
-import com.sonarcube.eighty.util.annotation.OnlyBoolean;
 import jakarta.annotation.Nullable;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
@@ -32,7 +31,6 @@ public class CarDto {
     @Positive
     private double price;
 
-//    @OnlyBoolean
     private boolean isElectric;
 
     @Size(min = 2, max = 10)

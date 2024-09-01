@@ -10,6 +10,8 @@ import com.sonarcube.eighty.exception.InvalidRequestException;
 import com.sonarcube.eighty.exception.ResourceConversionException;
 import com.sonarcube.eighty.exception.ResourceNotFoundException;
 import com.sonarcube.eighty.model.Car;
+import com.sonarcube.eighty.model.CarMake;
+import com.sonarcube.eighty.repository.CarMakeRepository;
 import com.sonarcube.eighty.repository.CarRepository;
 import com.sonarcube.eighty.service.CarService;
 import jakarta.validation.Valid;
@@ -24,6 +26,7 @@ import java.util.*;
 public class CarServiceImpl implements CarService {
 
     private final CarRepository carRepository;
+    private final CarMakeRepository carMakeRepository;
     private final ObjectMapper objectMapper;
     private static final String CAR_DTO = "CarDto";
     private static final String CAR = "Car";
@@ -49,7 +52,6 @@ public class CarServiceImpl implements CarService {
         Car car = carRepository.findById(id).orElseThrow(
                 () -> new ResourceNotFoundException(CAR, "id", id)
         );
-
         try {
             return convertToDto(car);
         } catch (JsonProcessingException e) {
@@ -59,13 +61,17 @@ public class CarServiceImpl implements CarService {
 
     @Override
     public CarDto saveCar(@Valid CarDto carDto) {
+        CarMake carMake = carMakeRepository.findByName(carDto.getMake()).orElseThrow(
+                () -> new ResourceNotFoundException("Car Make", "make", carDto.getMake())
+        );
         validateRequest(carDto);
+
         try {
-            Car car = convertToCar(carDto);
+            Car car = convertToCar(carDto, carMake);
             Car saved = carRepository.save(car);
             return convertToDto(saved);
         } catch (JsonProcessingException e) {
-            throw new ResourceConversionException(CAR, CAR_DTO);
+            throw new ResourceConversionException(CAR_DTO, CAR);
         }
     }
 
@@ -74,9 +80,12 @@ public class CarServiceImpl implements CarService {
         Car carById = carRepository.findById(id).orElseThrow(
                 () -> new ResourceNotFoundException(CAR, "id", id)
         );
+        CarMake carMake = carMakeRepository.findByName(carDto.getMake()).orElseThrow(
+                () -> new ResourceNotFoundException("Car Make", "make", carDto.getMake())
+        );
         validateRequest(carDto);
         try {
-            Car convertedToCar = convertToCar(carDto);
+            Car convertedToCar = convertToCar(carDto, carMake);
             Car updateCar = updateCarDetails(carById, convertedToCar);
             Car save = carRepository.save(updateCar);
             return convertToDto(save);
@@ -87,16 +96,17 @@ public class CarServiceImpl implements CarService {
 
     @Override
     public String deleteCar(Long id) {
-        if (carRepository.existsById(id)) {
-            carRepository.deleteById(id);
-            return "Car with id: " + id + " deleted successfully";
-        } else {
-            throw new ResourceNotFoundException(CAR, "id", id);
-        }
+//        if (carRepository.existsById(id)) {
+//            carRepository.deleteById(id);
+//            return "Car with id: " + id + " deleted successfully";
+//        } else {
+//            throw new ResourceNotFoundException(CAR, "id", id);
+//        }
+        return null;
     }
 
     private Car updateCarDetails(Car existingCar, Car car) {
-        existingCar.setMake(car.getMake());
+        existingCar.setCarMake(car.getCarMake());
         existingCar.setModel(car.getModel());
         existingCar.setYear(car.getYear());
         existingCar.setPrice(car.getPrice());
@@ -113,7 +123,7 @@ public class CarServiceImpl implements CarService {
     private CarDto convertToDto(Car car) throws JsonProcessingException {
         return CarDto.builder()
                 .id(car.getId())
-                .make(car.getMake())
+                .make(car.getCarMake().getName())
                 .model(car.getModel())
                 .year(car.getYear())
                 .price(car.getPrice())
@@ -127,7 +137,7 @@ public class CarServiceImpl implements CarService {
                 .build();
     }
 
-    private Car convertToCar(CarDto carDto) throws JsonProcessingException {
+    private Car convertToCar(CarDto carDto, CarMake carMake) throws JsonProcessingException {
         String engine = objectMapper.writeValueAsString(carDto.getEngine());
         String warranty = objectMapper.writeValueAsString(carDto.getWarranty());
         String dimensions = objectMapper.writeValueAsString(carDto.getDimensions());
@@ -135,7 +145,7 @@ public class CarServiceImpl implements CarService {
         String maintenanceDates = objectMapper.writeValueAsString(carDto.getMaintenanceDates());
         return Car.builder()
                 .id(carDto.getId())
-                .make(carDto.getMake())
+                .carMake(carMake)
                 .model(carDto.getModel())
                 .year(carDto.getYear())
                 .price(carDto.getPrice())

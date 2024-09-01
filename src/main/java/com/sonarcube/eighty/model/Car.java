@@ -1,14 +1,7 @@
 package com.sonarcube.eighty.model;
 
-import com.sonarcube.eighty.dto.Engine;
-import com.sonarcube.eighty.dto.Warranty;
-import com.sonarcube.eighty.dto.Dimensions;
 import jakarta.persistence.*;
 import lombok.*;
-
-import java.time.LocalDate;
-import java.util.List;
-import java.util.Map;
 
 @Entity
 @Getter
@@ -22,8 +15,6 @@ public class Car {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @Column(name = "make")
-    private String make;
     @Column(name = "model")
     private String model;
     @Column(name = "year")
@@ -44,4 +35,7 @@ public class Car {
     private String maintenanceDates;
     @Column(name = "dimensions")
     private String dimensions;
+    @ManyToOne
+    @JoinColumn(name = "make_id", nullable = false)
+    private CarMake carMake;
 }

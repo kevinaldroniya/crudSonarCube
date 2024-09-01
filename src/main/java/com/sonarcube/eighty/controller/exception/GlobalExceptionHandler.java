@@ -86,30 +86,6 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return new ResponseEntity<>(errorDetails, HttpStatus.BAD_REQUEST);
     }
 
-//    @ExceptionHandler(MethodArgumentNotValidException.class)
-//    public ResponseEntity<ErrorDetails> handleMethodArgumentNotValid(MethodArgumentNotValidException e, WebRequest webRequest) {
-//        // Extracting field errors
-//        List<String> errorMessages = e.getBindingResult()
-//                .getFieldErrors()
-//                .stream()
-//                .map(FieldError::getDefaultMessage)
-//                .toList();
-//
-//        // Join all error messages into a single string or use another format like JSON array
-//        String message = String.join(", ", errorMessages);
-//
-//        ErrorDetails errorDetails = ErrorDetails.builder()
-//                .timestamp(new Date())
-//                .status("400")
-//                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
-//                .message(message)
-//                .details("Validation failed for one or more fields")
-//                .path(webRequest.getDescription(false))
-//                .exception(e.getClass().getName())
-//                .build();
-//        return new ResponseEntity<>(errorDetails, HttpStatus.BAD_REQUEST);
-//    }
-
     @Override
     protected ResponseEntity<Object> handleHttpMessageNotReadable(HttpMessageNotReadableException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
 

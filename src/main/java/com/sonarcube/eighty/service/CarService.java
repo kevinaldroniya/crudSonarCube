@@ -1,7 +1,6 @@
 package com.sonarcube.eighty.service;
 
 import com.sonarcube.eighty.dto.CarDto;
-import com.sonarcube.eighty.model.Car;
 
 import java.util.List;
 

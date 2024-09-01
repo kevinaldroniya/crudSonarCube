@@ -1,6 +1,5 @@
 package com.sonarcube.eighty.dto;
 
-import jakarta.validation.constraints.Min;
 import lombok.*;
 
 @Getter

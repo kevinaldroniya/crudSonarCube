@@ -10,6 +10,6 @@ public class NotEmptyDimensionsValidator implements ConstraintValidator<NotEmpty
         if (dimensions == null) {
             return false;
         }
-        return dimensions.getLength() > 0 || dimensions.getWidth() > 0 || dimensions.getHeight() > 0 || dimensions.getWeight() > 0;
+        return dimensions.getLength() > 0 && dimensions.getWidth() > 0 && dimensions.getHeight() > 0 && dimensions.getWeight() > 0;
     }
 }
