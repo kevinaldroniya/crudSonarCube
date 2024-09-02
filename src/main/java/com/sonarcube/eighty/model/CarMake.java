@@ -3,7 +3,6 @@ package com.sonarcube.eighty.model;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.ZonedDateTime;
 import java.util.List;
 
 @Entity
@@ -12,7 +11,6 @@ import java.util.List;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-@ToString
 @Builder
 public class CarMake {
     @Id
@@ -37,4 +35,16 @@ public class CarMake {
 
     @OneToMany(mappedBy = "carMake", cascade = CascadeType.ALL)
     private List<Car> cars;
+
+    @Override
+    public String toString() {
+        return "CarMake{" +
+                "id=" + id +
+                ", name='" + name + '\'' +
+                ", isActive=" + isActive +
+                ", createdAt=" + createdAt +
+                ", updatedAt=" + updatedAt +
+                ", deletedAt=" + deletedAt +
+                '}';
+    }
 }

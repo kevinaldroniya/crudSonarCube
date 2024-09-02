@@ -61,11 +61,10 @@ public class CarServiceImpl implements CarService {
 
     @Override
     public CarDto saveCar(@Valid CarDto carDto) {
+        validateRequest(carDto);
         CarMake carMake = carMakeRepository.findByName(carDto.getMake()).orElseThrow(
                 () -> new ResourceNotFoundException("Car Make", "make", carDto.getMake())
         );
-        validateRequest(carDto);
-
         try {
             Car car = convertToCar(carDto, carMake);
             Car saved = carRepository.save(car);
@@ -77,13 +76,13 @@ public class CarServiceImpl implements CarService {
 
     @Override
     public CarDto updateCar(Long id, CarDto carDto) {
+        validateRequest(carDto);
         Car carById = carRepository.findById(id).orElseThrow(
                 () -> new ResourceNotFoundException(CAR, "id", id)
         );
         CarMake carMake = carMakeRepository.findByName(carDto.getMake()).orElseThrow(
                 () -> new ResourceNotFoundException("Car Make", "make", carDto.getMake())
         );
-        validateRequest(carDto);
         try {
             Car convertedToCar = convertToCar(carDto, carMake);
             Car updateCar = updateCarDetails(carById, convertedToCar);
@@ -96,13 +95,12 @@ public class CarServiceImpl implements CarService {
 
     @Override
     public String deleteCar(Long id) {
-//        if (carRepository.existsById(id)) {
-//            carRepository.deleteById(id);
-//            return "Car with id: " + id + " deleted successfully";
-//        } else {
-//            throw new ResourceNotFoundException(CAR, "id", id);
-//        }
-        return null;
+        if (carRepository.existsById(id)) {
+            carRepository.deleteById(id);
+            return "Car with id: " + id + " deleted successfully";
+        } else {
+            throw new ResourceNotFoundException(CAR, "id", id);
+        }
     }
 
     private Car updateCarDetails(Car existingCar, Car car) {

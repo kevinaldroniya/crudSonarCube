@@ -3,6 +3,7 @@ package com.sonarcube.eighty.controller;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sonarcube.eighty.dto.CarMakeResponse;
+import com.sonarcube.eighty.dto.ErrorDetails;
 import com.sonarcube.eighty.model.CarMake;
 import com.sonarcube.eighty.repository.CarMakeRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -46,7 +47,7 @@ class CarMakeControllerTest {
     @Test
     void testGetAllCarModels_shouldReturnAllCarModels() throws Exception {
         //Arrange
-        mockMvc.perform(get("/models")
+        mockMvc.perform(get("/makes")
                 .accept(MediaType.APPLICATION_JSON)
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
@@ -61,7 +62,7 @@ class CarMakeControllerTest {
     void testGetCarModelById_shouldReturnCarModelBasedOnId() throws Exception{
         //Arrange
         Long id = carMakeRepository.findAll().get(0).getId();
-        mockMvc.perform(get("/models/"+id)
+        mockMvc.perform(get("/makes/"+id)
                 .accept(MediaType.APPLICATION_JSON)
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
@@ -78,8 +79,9 @@ class CarMakeControllerTest {
     void testSaveCarModel_shouldSaveAndReturnCarModelResponse() throws Exception{
         //Arrange
         Map<String, Object> request = carModelRequest();
+        request.put("name","test");
         //Act
-        mockMvc.perform(post("/models")
+        mockMvc.perform(post("/makes")
                 .accept(MediaType.APPLICATION_JSON)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
@@ -93,13 +95,29 @@ class CarMakeControllerTest {
     }
 
     @Test
+    void testSaveCarMake_shouldThrowAlreadyExists() throws Exception{
+        Map<String, Object> request = carModelRequest();
+        request.put("name","Panamera");
+        mockMvc.perform(post("/makes")
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andDo(result -> {
+                    ErrorDetails response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {});
+                    assertNotNull(response);
+                    assertEquals("Car Make already exists with name : 'Panamera'", response.getDetails());
+                });
+    }
+
+    @Test
     void testUpdateCarModel_shouldUpdateAndReturnCarModelResponse() throws Exception{
         //Arrange
         Long id = carMakeRepository.findAll().get(0).getId();
         Map<String, Object> request = carModelRequest();
         request.put("name", "CX3");
         //Act
-        mockMvc.perform(put("/models/"+id)
+        mockMvc.perform(put("/makes/"+id)
                 .accept(MediaType.APPLICATION_JSON)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
@@ -113,18 +131,53 @@ class CarMakeControllerTest {
     }
 
     @Test
+    void testUpdateCar_shouldThrowAlreadyExists() throws Exception{
+        CarMake carMake = initializeCarModel();
+        carMake.setName("Already");
+        carMakeRepository.save(carMake);
+        Map<String, Object> request = carModelRequest();
+        request.put("name","Already");
+        Long id = carMakeRepository.findAll().get(0).getId();
+        mockMvc.perform(put("/makes/"+id)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                //Assert
+                .andExpect(status().isBadRequest())
+                .andDo(result -> {
+                    ErrorDetails response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {});
+                    assertNotNull(response);
+                    assertEquals("Car Make already exists with name : 'Already'", response.getDetails());
+                });
+    }
+
+    @Test
     void testDeleteCarModel_shouldDisableCarModel() throws Exception{
         //Arrange
         Long id = carMakeRepository.findAll().get(0).getId();
         //Act
-        mockMvc.perform(delete("/models/"+id)
+        mockMvc.perform(delete("/makes/"+id)
                 .accept(MediaType.APPLICATION_JSON)
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andDo(result -> {
                    String response = result.getResponse().getContentAsString();
                    assertNotNull(response);
-                   assertEquals("CarModel successfully deleted!", response);
+                   assertEquals("Car Make successfully deleted!", response);
+                });
+    }
+
+    @Test
+    void testDeleteCarMake_shouldThrowNotFoundException() throws Exception{
+        long id = 12312312L;
+        mockMvc.perform(delete("/makes/"+id)
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotFound())
+                .andDo(result -> {
+                    ErrorDetails response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {});
+                    assertNotNull(response);
+                    assertEquals("Car Make not found with id : '12312312'", response.getDetails());
                 });
     }
 

@@ -629,6 +629,15 @@ class CarServiceImplTest {
     }
 
     @Test
+    void testSaveCar_shouldThrowResourceNotFoundException_makeNotFound(){
+        CarDto oneCarDto = getOneCarDto();
+        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.empty());
+        ResourceNotFoundException response = assertThrows(ResourceNotFoundException.class, () -> carServiceImpl.saveCar(oneCarDto));
+        assertNotNull(response.getMessage());
+        assertEquals("Car Make not found with make : 'Make'", response.getMessage());
+    }
+
+    @Test
     void testUpdateCar_shouldThrowResourceConversionException_whenJsonProcessingException() throws JsonProcessingException {
         CarDto oneCarDto = getOneCarDto();
         Car oneCar = getOneCar();
@@ -1105,29 +1114,40 @@ class CarServiceImplTest {
         assertEquals(expectedMessage, response.getMessage());
     }
 
-//    @Test
-//    void testDeleteCar_shouldDeleteCar(){
-//        //Arrange
-//        Car oneCar = getOneCar();
-//        when(carRepository.existsById(1L)).thenReturn(true);
-//        //Act
-//        String response = carServiceImpl.deleteCar(1L);
-//        //Assert
-//        verify(carRepository, times(1)).deleteById(oneCar.getId());
-//        assertEquals("Car with id: 1 deleted successfully", response);
-//    }
-//
-//    @Test
-//    void testDeleteCar_shouldThrowResourceNotFoundException(){
-//        //Arrange
-//        when(carRepository.existsById(1L)).thenReturn(false);
-//
-//        //Act
-//        ResourceNotFoundException response = assertThrows(ResourceNotFoundException.class, () -> carServiceImpl.deleteCar(1L));
-//        //Assert
-//        assertNotNull(response);
-//        assertEquals("Car not found with id : '1'", response.getMessage());
-//    }
+    @Test
+    void testUpdateCar_shouldThrowResourceNotFoundException_carMakeNotFound(){
+        CarDto oneCarDto = getOneCarDto();
+        Car oneCar = getOneCar();
+        when(carRepository.findById(1L)).thenReturn(Optional.of(oneCar));
+        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.empty());
+        ResourceNotFoundException response = assertThrows(ResourceNotFoundException.class, () -> carServiceImpl.updateCar(1L, oneCarDto));
+        assertNotNull(response.getMessage());
+        assertEquals("Car Make not found with make : 'Make'", response.getMessage());
+    }
+
+    @Test
+    void testDeleteCar_shouldDeleteCar(){
+        //Arrange
+        Car oneCar = getOneCar();
+        when(carRepository.existsById(1L)).thenReturn(true);
+        //Act
+        String response = carServiceImpl.deleteCar(1L);
+        //Assert
+        verify(carRepository, times(1)).deleteById(oneCar.getId());
+        assertEquals("Car with id: 1 deleted successfully", response);
+    }
+
+    @Test
+    void testDeleteCar_shouldThrowResourceNotFoundException(){
+        //Arrange
+        when(carRepository.existsById(1L)).thenReturn(false);
+
+        //Act
+        ResourceNotFoundException response = assertThrows(ResourceNotFoundException.class, () -> carServiceImpl.deleteCar(1L));
+        //Assert
+        assertNotNull(response);
+        assertEquals("Car not found with id : '1'", response.getMessage());
+    }
 
 
     private List<Car> getAllCars(){

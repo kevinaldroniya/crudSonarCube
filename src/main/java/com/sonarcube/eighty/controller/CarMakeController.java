@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/models")
+@RequestMapping("/makes")
 public class CarMakeController {
 
     private final CarMakeService carMakeService;
@@ -24,7 +24,7 @@ public class CarMakeController {
             produces = MediaType.APPLICATION_JSON_VALUE
     )
     public ResponseEntity<List<CarMakeResponse>> getAllCarModels(){
-        List<CarMakeResponse> responses = carMakeService.getAllCarModels();
+        List<CarMakeResponse> responses = carMakeService.getAllCarMakes();
         return ResponseEntity.ok(responses);
     }
 
@@ -33,7 +33,7 @@ public class CarMakeController {
             produces = MediaType.APPLICATION_JSON_VALUE
     )
     public ResponseEntity<CarMakeResponse> getCarModel(@PathVariable("id") Long id){
-        CarMakeResponse response = carMakeService.getCarModel(id);
+        CarMakeResponse response = carMakeService.getCarMakes(id);
         return ResponseEntity.ok(response);
     }
 
@@ -42,7 +42,7 @@ public class CarMakeController {
             produces = MediaType.APPLICATION_JSON_VALUE
     )
     public ResponseEntity<CarMakeResponse> saveCarModel(@RequestBody CarMakeRequest request){
-        CarMakeResponse response = carMakeService.saveCarModel(request);
+        CarMakeResponse response = carMakeService.saveCarMake(request);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
@@ -52,7 +52,7 @@ public class CarMakeController {
             produces = MediaType.APPLICATION_JSON_VALUE
     )
     public ResponseEntity<CarMakeResponse> updateCarModel(@PathVariable("id") Long id, @RequestBody CarMakeRequest request){
-        CarMakeResponse response = carMakeService.updateCarModel(id, request);
+        CarMakeResponse response = carMakeService.updateCarMake(id, request);
         return ResponseEntity.ok(response);
     }
 
@@ -61,7 +61,7 @@ public class CarMakeController {
             produces = MediaType.APPLICATION_JSON_VALUE
     )
     public ResponseEntity<String> deleteCarModel(@PathVariable("id") Long id){
-        String response = carMakeService.deleteCarModel(id);
+        String response = carMakeService.deleteCarMake(id);
         return ResponseEntity.ok(response);
     }
 }

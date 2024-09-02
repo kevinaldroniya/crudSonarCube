@@ -3,6 +3,7 @@ package com.sonarcube.eighty.controller.exception;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.sonarcube.eighty.dto.ErrorDetails;
 import com.sonarcube.eighty.exception.InvalidRequestException;
+import com.sonarcube.eighty.exception.ResourceAlreadyExistsException;
 import com.sonarcube.eighty.exception.ResourceConversionException;
 import com.sonarcube.eighty.exception.ResourceNotFoundException;
 import org.springframework.http.HttpHeaders;
@@ -18,6 +19,7 @@ import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
+import java.time.ZonedDateTime;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -79,6 +81,20 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 .status("400")
                 .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
                 .message("Field Validation Error")
+                .details(e.getMessage())
+                .path(webRequest.getDescription(false))
+                .exception(e.getClass().getName())
+                .build();
+        return new ResponseEntity<>(errorDetails, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(ResourceAlreadyExistsException.class)
+    public ResponseEntity<ErrorDetails> handleResourceAlreadyExistException(ResourceAlreadyExistsException e, WebRequest webRequest){
+        ErrorDetails errorDetails = ErrorDetails.builder()
+                .timestamp(new Date())
+                .status("400")
+                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
+                .message("Resource already exists")
                 .details(e.getMessage())
                 .path(webRequest.getDescription(false))
                 .exception(e.getClass().getName())

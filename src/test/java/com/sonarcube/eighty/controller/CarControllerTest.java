@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sonarcube.eighty.dto.*;
 import com.sonarcube.eighty.model.Car;
 import com.sonarcube.eighty.model.CarMake;
+import com.sonarcube.eighty.repository.CarMakeRepository;
 import com.sonarcube.eighty.repository.CarRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,6 +19,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
+import java.time.ZonedDateTime;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -35,12 +37,18 @@ class CarControllerTest {
     private CarRepository carRepository;
 
     @Autowired
+    private CarMakeRepository carMakeRepository;
+
+    @Autowired
     private ObjectMapper objectMapper;
 
 
     @BeforeEach
     void setUp() throws JsonProcessingException {
         carRepository.deleteAll();
+        carMakeRepository.deleteAll();
+        CarMake carMake = initCarMake();
+        carMakeRepository.save(carMake);
         Car car = intitalizeCar();
         carRepository.save(car);
     }
@@ -190,7 +198,7 @@ class CarControllerTest {
                     List<Car> carList = carRepository.findAll();
                     Car car = carList.get(carList.size() - 1);
                     assertNotNull(response);
-                    assertEquals(carDto.getMake(), car.getMake());
+                    assertEquals(carDto.getMake(), car.getCarMake().getName());
                 });
     }
 
@@ -810,10 +818,26 @@ class CarControllerTest {
     }
 
     @Test
+    void testSaveCar_shouldThrowNotFoundException_whenMakeNotFound() throws Exception{
+        Map<String, Object> request = carRequest();
+        request.put("make","notFound");
+        mockMvc.perform(post("/car")
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isNotFound())
+                .andDo(result -> {
+                   ErrorDetails response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {});
+                   assertNotNull(response.getError());
+                   assertEquals("Car Make not found with make : 'notFound'", response.getDetails());
+                });
+    }
+
+    @Test
     void testUpdateCar_shouldUpdateCar_returnUpdatedCarDto() throws Exception{
         //Arrange
         Map<String, Object> request = carRequest();
-        request.put("make","make-update");
+            request.put("make","Test");
         Long id = carRepository.findAll().get(0).getId();
         //Act
         mockMvc.perform(put("/car/"+id)
@@ -827,7 +851,7 @@ class CarControllerTest {
                     });
                     assertNotNull(carDto.getId());
                     assertEquals(id, carDto.getId());
-                    assertEquals("make-update",carDto.getMake());
+                    assertEquals("Test",carDto.getMake());
                 });
 
     }
@@ -1283,6 +1307,23 @@ class CarControllerTest {
     }
 
     @Test
+    void testUpdateCar_shouldThrowNotFoundException_whenMakeNotFound() throws Exception{
+        Map<String, Object> request = carRequest();
+        request.put("make","notFound");
+        Long id = carRepository.findAll().get(0).getId();
+        mockMvc.perform(put("/car/"+id)
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isNotFound())
+                .andDo(result -> {
+                    ErrorDetails response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {});
+                    assertNotNull(response.getError());
+                    assertEquals("Car Make not found with make : 'notFound'", response.getDetails());
+                });
+    }
+
+    @Test
     void testDeleteCar() throws Exception{
         //Arrange
         Long id = carRepository.findAll().get(0).getId();
@@ -1353,10 +1394,21 @@ class CarControllerTest {
         return objectMapper.writeValueAsString(dimensions);
     }
 
+    private CarMake initCarMake(){
+        return CarMake.builder()
+                .name("Test")
+                .createdAt(ZonedDateTime.now().toEpochSecond())
+                .isActive(true)
+                .updatedAt(null)
+                .deletedAt(null)
+                .build();
+    }
+
     private Car intitalizeCar() throws JsonProcessingException {
+        CarMake carMake = carMakeRepository.findAll().get(0);
         return Car.builder()
                 //.id(1L)
-                .carMake(CarMake.builder().id(1L).name("Make").build())
+                .carMake(carMake)
                 .model("Model")
                 .year(2021)
                 .price(10000)
@@ -1371,9 +1423,10 @@ class CarControllerTest {
     }
 
     private Car badInitializeCar(){
+        CarMake carMake = carMakeRepository.findAll().get(0);
         return Car.builder()
                 .id(1L)
-                .make("Make")
+                .carMake(carMake)
                 .model("Model")
                 .year(2021)
                 .price(10000)
@@ -1390,7 +1443,7 @@ class CarControllerTest {
     private CarDto getOneCarDto(){
         return CarDto.builder()
                 //.id(1L)
-                .make("Make-Create")
+                .make("Test")
                 .model("Model")
                 .year(2021)
                 .price(10000)
@@ -1453,7 +1506,7 @@ class CarControllerTest {
         dimensions.put("weight", 1);
 
         Map<String, Object> carRequest = new HashMap<>();
-        carRequest.put("make", "Make-New");
+        carRequest.put("make", "Test");
         carRequest.put("model", "Model");
         carRequest.put("year", 2000);
         carRequest.put("price", 100000);

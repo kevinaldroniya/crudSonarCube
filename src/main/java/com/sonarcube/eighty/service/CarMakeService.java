@@ -6,9 +6,9 @@ import com.sonarcube.eighty.dto.CarMakeResponse;
 import java.util.List;
 
 public interface CarMakeService {
-    List<CarMakeResponse> getAllCarModels();
-    CarMakeResponse getCarModel(Long id);
-    CarMakeResponse saveCarModel(CarMakeRequest request);
-    CarMakeResponse updateCarModel(Long id, CarMakeRequest request);
-    String deleteCarModel(Long id);
+    List<CarMakeResponse> getAllCarMakes();
+    CarMakeResponse getCarMakes(Long id);
+    CarMakeResponse saveCarMake(CarMakeRequest request);
+    CarMakeResponse updateCarMake(Long id, CarMakeRequest request);
+    String deleteCarMake(Long id);
 }

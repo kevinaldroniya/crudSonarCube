@@ -2,6 +2,8 @@ package com.sonarcube.eighty.service.implementation;
 
 import com.sonarcube.eighty.dto.CarMakeRequest;
 import com.sonarcube.eighty.dto.CarMakeResponse;
+import com.sonarcube.eighty.exception.ResourceAlreadyExistsException;
+import com.sonarcube.eighty.exception.ResourceNotFoundException;
 import com.sonarcube.eighty.model.CarMake;
 import com.sonarcube.eighty.repository.CarMakeRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,7 +24,7 @@ import static org.mockito.Mockito.when;
 class CarMakeServiceImplTest {
 
     @InjectMocks
-    private CarMakeServiceImpl carModelService;
+    private CarMakeServiceImpl carMakeService;
 
     @Mock
     private CarMakeRepository carMakeRepository;
@@ -33,80 +35,155 @@ class CarMakeServiceImplTest {
     }
 
     @Test
-    void testGetAllCarModels_shouldReturnAllCarModels(){
+    void testGetAllCarMakes_shouldReturnAllCarMakes(){
         //Arrange
-        List<CarMake> mockCarMakes = getAllCarModels();
+        List<CarMake> mockCarMakes = getAllCarMakes();
         when(carMakeRepository.findAll()).thenReturn(mockCarMakes);
         //Act
-        List<CarMakeResponse> responses = carModelService.getAllCarModels();
+        List<CarMakeResponse> responses = carMakeService.getAllCarMakes();
         assertNotNull(responses);
         assertEquals(mockCarMakes.size(), responses.size());
         assertEquals(mockCarMakes.get(0).getName(), responses.get(0).getName());
     }
 
     @Test
-    void testGetCarModelById_shouldReturnCarModel(){
+    void testGetCarModelById_shouldReturnCarMakes(){
         //Arrange
-        CarMake oneCarMake = getOneCarModel();
+        CarMake oneCarMake = getOneCarMakes();
         when(carMakeRepository.findById(1L)).thenReturn(Optional.of(oneCarMake));
         //Act
-        CarMakeResponse response = carModelService.getCarModel(1L);
+        CarMakeResponse response = carMakeService.getCarMakes(1L);
         //Assert
         assertNotNull(response);
         assertEquals(oneCarMake.getName(), response.getName());
     }
 
     @Test
-    void testSaveCarModel_shouldSaveAndReturnCarModel(){
+    void testGetCarMakeById_shouldThrowNotFoundException(){
+        when(carMakeRepository.findById(1L)).thenReturn(Optional.empty());
+        ResourceNotFoundException response = assertThrows(ResourceNotFoundException.class, () -> carMakeService.getCarMakes(1L));
+        assertNotNull(response);
+        assertEquals("Car Make not found with id : '1'", response.getMessage());
+    }
+
+    @Test
+    void testSaveCarModel_shouldSaveAndReturnCarMake(){
         //Arrange
-        CarMakeRequest request = getCarModelRequest();
+        CarMakeRequest request = getCarMakeRequest();
         when(carMakeRepository.save(any(CarMake.class))).thenReturn(getCarMake());
         //Act
-        CarMakeResponse response = carModelService.saveCarModel(request);
+        CarMakeResponse response = carMakeService.saveCarMake(request);
         //Assert
         assertNotNull(response);
         assertEquals(request.getName(), response.getName());
     }
 
     @Test
-    void testUpdateCarModel_shouldUpdateAndReturnCarModelResponse(){
+    void testSaveCarMake_shouldThrowResourceAlreadyExistsException(){
+        //Arrange
+        CarMakeRequest carMakeRequest = getCarMakeRequest();
+        CarMake carMake = getCarMake();
+        when(carMakeRepository.findByName(carMakeRequest.getName())).thenReturn(Optional.of(carMake));
+        //Act
+        ResourceAlreadyExistsException response = assertThrows(ResourceAlreadyExistsException.class, () -> carMakeService.saveCarMake(carMakeRequest));
+        //Assert
+        assertNotNull(response);
+        assertEquals("Car Make already exists with name : 'make'", response.getMessage());
+    }
+
+    @Test
+    void testUpdateCarModel_shouldUpdateAndReturnCarMakeResponse_carMakeNameNotExists(){
         //Arrange
         CarMake carMake = getCarMake();
         carMake.setName("update");
-        CarMakeRequest carMakeRequestUpdate = getCarModelRequest();
+        CarMakeRequest carMakeRequestUpdate = getCarMakeRequest();
         carMakeRequestUpdate.setName("update");
         when(carMakeRepository.findById(1L)).thenReturn(Optional.of(carMake));
         when(carMakeRepository.findByName(carMakeRequestUpdate.getName())).thenReturn(Optional.empty());
         when(carMakeRepository.save(any(CarMake.class))).thenReturn(carMake);
         //Act
-        CarMakeResponse response = carModelService.updateCarModel(1L, carMakeRequestUpdate);
+        CarMakeResponse response = carMakeService.updateCarMake(1L, carMakeRequestUpdate);
         //Assert
         assertNotNull(response);
         assertEquals(carMakeRequestUpdate.getName(), response.getName());
     }
 
     @Test
-    void testDeleteCarModel_shouldDisabledCarModel(){
+    void testUpdateCarModel_shouldUpdateAndReturnCarMakeResponse_carMakeNameIsExists(){
+        //Arrange
         CarMake carMake = getCarMake();
+        CarMakeRequest carMakeRequestUpdate = getCarMakeRequest();
+        carMake.setName("update");
+        carMakeRequestUpdate.setName("update");
         when(carMakeRepository.findById(1L)).thenReturn(Optional.of(carMake));
-        String response = carModelService.deleteCarModel(1L);
+        when(carMakeRepository.findByName(carMakeRequestUpdate.getName())).thenReturn(Optional.of(carMake));
+        when(carMakeRepository.save(any(CarMake.class))).thenReturn(carMake);
+        //Act
+        CarMakeResponse response = carMakeService.updateCarMake(1L, carMakeRequestUpdate);
+        //Assert
         assertNotNull(response);
-        assertEquals("CarModel successfully deleted!", response);
+        assertEquals(carMakeRequestUpdate.getName(), response.getName());
     }
 
-    private List<CarMake> getAllCarModels(){
+    @Test
+    void testUpdateCarMake_shouldThrowNotFoundException(){
+        CarMakeRequest carMakeRequest = getCarMakeRequest();
+        when(carMakeRepository.findById(1L)).thenReturn(Optional.empty());
+        ResourceNotFoundException response = assertThrows(ResourceNotFoundException.class, () -> carMakeService.updateCarMake(1L, carMakeRequest));
+        assertNotNull(response);
+        assertEquals("Car Make not found with id : '1'", response.getMessage());
+    }
+
+    @Test
+    void testUpdateCar_shouldThrowAlreadyExistsException(){
+        //Arrange
+        CarMake carMake = getCarMake();
+        CarMake otherCarMake = getCarMake();
+        CarMakeRequest carMakeRequestUpdate = getCarMakeRequest();
+        carMake.setName("make");
+        otherCarMake.setName("old");
+        otherCarMake.setId(2L);
+        carMakeRequestUpdate.setName("old");
+        when(carMakeRepository.findById(1L)).thenReturn(Optional.of(carMake));
+        when(carMakeRepository.findByName(carMakeRequestUpdate.getName())).thenReturn(Optional.of(otherCarMake));
+
+        //Act
+        ResourceAlreadyExistsException response = assertThrows(ResourceAlreadyExistsException.class, () -> carMakeService.updateCarMake(1L, carMakeRequestUpdate));
+        //Assert
+        assertNotNull(response);
+        assertEquals("Car Make already exists with name : 'old'", response.getMessage());
+    }
+
+    @Test
+    void testDeleteCarModel_shouldDisabledCarMake(){
+        CarMake carMake = getCarMake();
+        when(carMakeRepository.findById(1L)).thenReturn(Optional.of(carMake));
+        String response = carMakeService.deleteCarMake(1L);
+        assertNotNull(response);
+        assertEquals("Car Make successfully deleted!", response);
+    }
+
+    @Test
+    void testDeleteCarMake_shouldThrowNotFoundException(){
+        when(carMakeRepository.findById(1L)).thenReturn(Optional.empty());
+        ResourceNotFoundException response = assertThrows(ResourceNotFoundException.class, () -> carMakeService.deleteCarMake(1L));
+        assertNotNull(response);
+        assertEquals("Car Make not found with id : '1'", response.getMessage());
+    }
+
+    private List<CarMake> getAllCarMakes(){
         List<CarMake> carMakes = new ArrayList<>();
         for (int i = 0; i < 10; i++) {
-            CarMake oneCarMake = getOneCarModel();
+            CarMake oneCarMake = getOneCarMakes();
             carMakes.add(oneCarMake);
         }
         return carMakes;
     }
 
-    private CarMake getOneCarModel(){
+    private CarMake getOneCarMakes(){
         return  CarMake.builder()
                 .id(1L)
-                .name("model")
+                .name("make")
                 .createdAt(ZonedDateTime.now().toEpochSecond())
                 .isActive(true)
                 .updatedAt(null)
@@ -114,16 +191,16 @@ class CarMakeServiceImplTest {
                 .build();
     }
 
-    private CarMakeRequest getCarModelRequest() {
+    private CarMakeRequest getCarMakeRequest() {
         return CarMakeRequest.builder()
-                .name("model")
+                .name("make")
                 .build();
     }
 
     private CarMake getCarMake(){
         return CarMake.builder()
                 .id(1L)
-                .name("model")
+                .name("make")
                 .isActive(true)
                 .createdAt(ZonedDateTime.now().toEpochSecond())
                 .updatedAt(null)
