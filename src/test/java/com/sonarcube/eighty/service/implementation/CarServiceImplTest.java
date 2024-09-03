@@ -1165,6 +1165,33 @@ class CarServiceImplTest {
         assertEquals("Car not found with id : '1'", response.getMessage());
     }
 
+    @ParameterizedTest
+    @CsvSource({
+            "''",
+            "active",
+            "sold",
+            "archive",
+            "deleted"
+    })
+    void testUpdateStatusCar_shouldUpdateStatusAndReturnResponse(String value) throws Exception{
+        CarStatusRequest request = getCarStatusRequest();
+        request.setCarStatus(CarStatus.fromValue(value));
+        Car oneCar = getOneCar();
+        Car savedCar = getOneCar();
+        savedCar.setUpdatedAt(ZonedDateTime.now().toEpochSecond());
+        savedCar.setStatus(CarStatus.fromValue(value).toString());
+        when(carRepository.findById(1L)).thenReturn(Optional.of(oneCar));
+        when(carRepository.save(any(Car.class))).thenReturn(savedCar);
+        when(objectMapper.readValue(getFeatures(), String[].class)).thenReturn(getCarDtoFeatures());
+        when(objectMapper.readValue(getEngine(), Engine.class)).thenReturn(getCarDtoEngine());
+        when(objectMapper.readValue(getWarranty(), Warranty.class)).thenReturn(getCarDtoWarranty());
+        when(objectMapper.readValue(getMaintenanceDates(), LocalDate[].class)).thenReturn(getCarDtoMaintenanceDates());
+        when(objectMapper.readValue(getDimensions(), Dimensions.class)).thenReturn(getCarDtoDimensions());
+        CarDtoResponse response = carServiceImpl.updateCarStatus(1L, request);
+        assertNotNull(response);
+        assertEquals(value, response.getStatus().getValue());
+    }
+
 
     private List<Car> getAllCars(){
         List<Car> cars = new ArrayList<>();
@@ -1351,6 +1378,12 @@ class CarServiceImplTest {
                 .createdAt(ZonedDateTime.now().toEpochSecond())
                 .updatedAt(ZonedDateTime.now().toEpochSecond())
                 .deletedAt(ZonedDateTime.now().toEpochSecond())
+                .build();
+    }
+
+    private CarStatusRequest getCarStatusRequest(){
+        return CarStatusRequest.builder()
+                .carStatus(CarStatus.ACTIVE)
                 .build();
     }
 }

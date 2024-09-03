@@ -5,7 +5,8 @@ import com.sonarcube.eighty.exception.ResourceConversionException;
 public enum CarStatus {
     ACTIVE("active"),
     SOLD("sold"),
-    ARCHIVE("archive");
+    ARCHIVE("archive"),
+    DELETED("deleted");
 
     private final String value;
 

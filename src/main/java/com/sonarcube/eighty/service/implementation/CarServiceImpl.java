@@ -97,6 +97,21 @@ public class CarServiceImpl implements CarService {
     }
 
     @Override
+    public CarDtoResponse updateCarStatus(Long id, CarStatusRequest carStatusRequest) {
+        Car existingCar = carRepository.findById(id).orElseThrow(
+                () -> new ResourceNotFoundException(CAR, "id", id)
+        );
+        existingCar.setStatus(carStatusRequest.getCarStatus().getValue());
+        existingCar.setUpdatedAt(ZonedDateTime.now().toEpochSecond());
+        Car savedCar = carRepository.save(existingCar);
+        try {
+            return convertToDtoResponse(savedCar);
+        }catch (JsonProcessingException e){
+            throw new ResourceConversionException(CAR_DTO, CAR);
+        }
+    }
+
+    @Override
     public String deleteCar(Long id) {
         if (carRepository.existsById(id)) {
             carRepository.deleteById(id);
