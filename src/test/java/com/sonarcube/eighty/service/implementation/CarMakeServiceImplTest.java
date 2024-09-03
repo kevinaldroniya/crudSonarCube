@@ -47,6 +47,17 @@ class CarMakeServiceImplTest {
     }
 
     @Test
+    void testGetCarMakeById_shouldReturnAllCarMakes_withAllFieldHasValue(){
+        CarMake oneCarMakes = getOneCarMakes();
+        oneCarMakes.setUpdatedAt(ZonedDateTime.now().toEpochSecond());
+        oneCarMakes.setDeletedAt(ZonedDateTime.now().toEpochSecond());
+        when(carMakeRepository.findById(1L)).thenReturn(Optional.of(oneCarMakes));
+        CarMakeResponse response = carMakeService.getCarMakes(1L);
+        assertNotNull(response);
+        assertEquals(oneCarMakes.getName(),response.getName());
+    }
+
+    @Test
     void testGetCarModelById_shouldReturnCarMakes(){
         //Arrange
         CarMake oneCarMake = getOneCarMakes();

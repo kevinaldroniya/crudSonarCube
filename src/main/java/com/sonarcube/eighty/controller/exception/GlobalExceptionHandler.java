@@ -146,10 +146,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         if (ex.getCause() instanceof JsonMappingException jsonEx) {
             List<JsonMappingException.Reference> references = jsonEx.getPath();
 
-            if (!references.isEmpty()) {
-                String fieldName = references.get(0).getFieldName();
-                message = String.format("Invalid value provided for field '%s'. Please ensure the value is correct and of the right type.", fieldName);
-            }
+            String fieldName = references.get(0).getFieldName();
+            message = String.format("Invalid value provided for field '%s'. Please ensure the value is correct and of the right type.", fieldName);
         }
         return message;
     }

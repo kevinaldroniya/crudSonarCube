@@ -21,6 +21,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import java.io.IOException;
 import java.time.LocalDate;
 import java.time.ZonedDateTime;
 import java.util.*;
@@ -650,7 +651,7 @@ class CarServiceImplTest {
     }
 
     @Test
-    void testUpdateCar_shouldReturnUpdatedCar() throws JsonProcessingException{
+    void testUpdateCar_shouldReturnUpdatedCar() throws IOException {
         //Arrange
         CarDto oneCarDto = getOneCarDto();
         oneCarDto.setMake("Make Update");

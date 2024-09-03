@@ -298,6 +298,25 @@ class CarControllerTest {
     }
 
     @Test
+    void testSaveCar_shouldThrowBadRequest_malformedRequest() throws Exception{
+        //Arrange
+        String malformedJsonRequest = malformedJsonRequest();
+        //Act
+        mockMvc.perform(
+                        post("/car")
+                                .accept(MediaType.APPLICATION_JSON)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(malformedJsonRequest))
+                //Assert
+                .andExpect(status().isBadRequest())
+                .andDo(result -> {
+                    ErrorDetails response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {});
+                    assertNotNull(response);
+                    assertEquals("Your request could not be processed due to invalid input.", response.getDetails());
+                });
+    }
+
+    @Test
     void testSaveCar_shouldThrowBadRequest_priceNullOrEmpty() throws Exception{
         //Arrange
         Map<String, Object> request = carRequest();
@@ -1306,6 +1325,7 @@ class CarControllerTest {
                 });
     }
 
+
     @Test
     void testUpdateCar_shouldThrowNotFoundException_whenMakeNotFound() throws Exception{
         Map<String, Object> request = carRequest();
@@ -1518,5 +1538,42 @@ class CarControllerTest {
         carRequest.put("dimensions", dimensions);
         carRequest.put("maintenanceDates", getMaintenanceDatesDto());
         return carRequest;
+    }
+
+    private String malformedJsonRequest(){
+       return """
+               {
+                   "id": null,
+                   "make": "Test",
+                   "model": "Model",
+                   "year": 2024,
+                   "price": 100000.0,
+                   "features": [
+                       "Feature1",
+                       "Feature2",
+                       "Feature3"
+                   ],
+                   "engine": {
+                       "type": "EngineType",
+                       "horsepower": 100,
+                       "torque": 300
+                   },
+                   "previousOwner": 1,
+                   "warranty": {
+                       "basic": "Basic",
+                       "powertrain": "Powertrain"
+                   },
+                   "maintenanceDates": [
+                       "2024-08-12",
+                       "2024-08-12"
+                   ],
+                   "dimensions": {
+                       "length": 100,
+                       "width": 100,
+                       "height": 30,
+                       "weight": 10
+                   },
+                   "electric": true
+               """;
     }
 }
