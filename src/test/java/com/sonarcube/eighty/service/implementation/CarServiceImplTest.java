@@ -2,14 +2,11 @@ package com.sonarcube.eighty.service.implementation;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sonarcube.eighty.dto.CarDto;
+import com.sonarcube.eighty.dto.*;
 import com.sonarcube.eighty.exception.InvalidRequestException;
 import com.sonarcube.eighty.exception.ResourceConversionException;
 import com.sonarcube.eighty.exception.ResourceNotFoundException;
 import com.sonarcube.eighty.model.Car;
-import com.sonarcube.eighty.dto.Dimensions;
-import com.sonarcube.eighty.dto.Engine;
-import com.sonarcube.eighty.dto.Warranty;
 import com.sonarcube.eighty.model.CarMake;
 import com.sonarcube.eighty.repository.CarMakeRepository;
 import com.sonarcube.eighty.repository.CarRepository;
@@ -62,7 +59,7 @@ class CarServiceImplTest {
         when(objectMapper.readValue(getWarranty(), Warranty.class)).thenReturn(getCarDtoWarranty());
         when(objectMapper.readValue(getDimensions(), Dimensions.class)).thenReturn(getCarDtoDimensions());
         //Act
-        List<CarDto> actualCars = carServiceImpl.getAllCars();
+        List<CarDtoResponse> actualCars = carServiceImpl.getAllCars();
         //Assert
         assertNotNull(actualCars);
     }
@@ -73,7 +70,7 @@ class CarServiceImplTest {
         List<Car> mockCars = new ArrayList<>();
         when(carRepository.findAll()).thenReturn(mockCars);
         //Act
-        List<CarDto> actualCars = carServiceImpl.getAllCars();
+        List<CarDtoResponse> actualCars = carServiceImpl.getAllCars();
         //Assert
         assertNotNull(actualCars);
     }
@@ -111,10 +108,28 @@ class CarServiceImplTest {
         when(objectMapper.readValue(getMaintenanceDates(), LocalDate[].class)).thenReturn(getCarDtoMaintenanceDates());
         when(objectMapper.readValue(getDimensions(), Dimensions.class)).thenReturn(getCarDtoDimensions());
         //Act
-        CarDto actualCar = carServiceImpl.getCarById(1L);
+        CarDtoResponse actualCar = carServiceImpl.getCarById(1L);
         //Assert
         assertNotNull(actualCar);
         assertEquals(mockCar.getId(), actualCar.getId());
+    }
+
+    @Test
+    void testGetCarById_shouldThrow() throws JsonProcessingException {
+        //Arrange
+        Car mockCar = getOneCar();
+        mockCar.setStatus("notValid");
+        when(carRepository.findById(1L)).thenReturn(Optional.of(mockCar));
+        when(objectMapper.readValue(getFeatures(), String[].class)).thenReturn(getCarDtoFeatures());
+        when(objectMapper.readValue(getEngine(), Engine.class)).thenReturn(getCarDtoEngine());
+        when(objectMapper.readValue(getWarranty(), Warranty.class)).thenReturn(getCarDtoWarranty());
+        when(objectMapper.readValue(getMaintenanceDates(), LocalDate[].class)).thenReturn(getCarDtoMaintenanceDates());
+        when(objectMapper.readValue(getDimensions(), Dimensions.class)).thenReturn(getCarDtoDimensions());
+        //Act
+        ResourceConversionException response = assertThrows(ResourceConversionException.class, () -> carServiceImpl.getCarById(1L));
+        //Assert
+        assertNotNull(response);
+        assertEquals("Error while serializing Car to CarDtoResponse", response.getMessage());
     }
 
     @Test
@@ -130,15 +145,15 @@ class CarServiceImplTest {
     @Test
     void testSaveCar_shouldReturnCar() throws JsonProcessingException {
         //Arrange
-        CarDto oneCarDto = getOneCarDto();
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
         Car oneCar = getOneCar();
         System.out.println(oneCar.toString());
         when(carMakeRepository.findByName("Make")).thenReturn(Optional.of(getCarMake()));
-        when(objectMapper.writeValueAsString(oneCarDto.getEngine())).thenReturn(oneCar.getEngine());
-        when(objectMapper.writeValueAsString(oneCarDto.getWarranty())).thenReturn(oneCar.getWarranty());
-        when(objectMapper.writeValueAsString(oneCarDto.getDimensions())).thenReturn(oneCar.getDimensions());
-        when(objectMapper.writeValueAsString(oneCarDto.getFeatures())).thenReturn(oneCar.getFeatures());
-        when(objectMapper.writeValueAsString(oneCarDto.getMaintenanceDates())).thenReturn(oneCar.getMaintenanceDates());
+        when(objectMapper.writeValueAsString(oneCarDtoRequest.getEngine())).thenReturn(oneCar.getEngine());
+        when(objectMapper.writeValueAsString(oneCarDtoRequest.getWarranty())).thenReturn(oneCar.getWarranty());
+        when(objectMapper.writeValueAsString(oneCarDtoRequest.getDimensions())).thenReturn(oneCar.getDimensions());
+        when(objectMapper.writeValueAsString(oneCarDtoRequest.getFeatures())).thenReturn(oneCar.getFeatures());
+        when(objectMapper.writeValueAsString(oneCarDtoRequest.getMaintenanceDates())).thenReturn(oneCar.getMaintenanceDates());
         when(objectMapper.readValue(getFeatures(), String[].class)).thenReturn(getCarDtoFeatures());
         when(objectMapper.readValue(getEngine(), Engine.class)).thenReturn(getCarDtoEngine());
         when(objectMapper.readValue(getWarranty(), Warranty.class)).thenReturn(getCarDtoWarranty());
@@ -147,20 +162,20 @@ class CarServiceImplTest {
         when(carRepository.save(any(Car.class))).thenReturn(oneCar);
 
         //Act
-        CarDto response = carServiceImpl.saveCar(oneCarDto);
+        CarDtoResponse response = carServiceImpl.saveCar(oneCarDtoRequest);
         //Assert
         assertNotNull(response);
-        assertEquals(oneCarDto.getMake(), response.getMake());
+        assertEquals(oneCarDtoRequest.getMake(), response.getMake());
     }
 
     @Test
     void testSaveCar_shouldThrowInvalidRequestException_makeEmpty(){
         //Arrange
-        CarDto oneCarDto = getOneCarDto();
-        oneCarDto.setMake("");
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.of(getCarMake()));
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
+        oneCarDtoRequest.setMake("");
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.of(getCarMake()));
         //Act
-        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.saveCar(oneCarDto));
+        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.saveCar(oneCarDtoRequest));
         //Assert
         assertEquals("'make' must not be empty", response.getMessage());
     }
@@ -168,11 +183,11 @@ class CarServiceImplTest {
     @Test
     void testSaveCar_shouldThrowInvalidRequestException_makeBlank(){
         //Arrange
-        CarDto oneCarDto = getOneCarDto();
-        oneCarDto.setMake("   ");
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.of(getCarMake()));
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
+        oneCarDtoRequest.setMake("   ");
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.of(getCarMake()));
         //Act
-        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.saveCar(oneCarDto));
+        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.saveCar(oneCarDtoRequest));
         //Assert
         assertEquals("'make' must not be empty", response.getMessage());
     }
@@ -180,11 +195,11 @@ class CarServiceImplTest {
     @Test
     void testSaveCar_shouldThrowInvalidRequestException_modelEmpty(){
         //Arrange
-        CarDto oneCarDto = getOneCarDto();
-        oneCarDto.setModel("");
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.of(getCarMake()));
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
+        oneCarDtoRequest.setModel("");
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.of(getCarMake()));
         //Act
-        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.saveCar(oneCarDto));
+        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.saveCar(oneCarDtoRequest));
         //Assert
         assertEquals("'model' must not be empty", response.getMessage());
     }
@@ -192,11 +207,11 @@ class CarServiceImplTest {
     @Test
     void testSaveCar_shouldThrowInvalidRequestException_modelBlank(){
         //Arrange
-        CarDto oneCarDto = getOneCarDto();
-        oneCarDto.setModel("  ");
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.of(getCarMake()));
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
+        oneCarDtoRequest.setModel("  ");
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.of(getCarMake()));
         //Act
-        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.saveCar(oneCarDto));
+        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.saveCar(oneCarDtoRequest));
         //Assert
         assertEquals("'model' must not be empty", response.getMessage());
     }
@@ -204,11 +219,11 @@ class CarServiceImplTest {
     @Test
     void testSaveCar_shouldThrowInvalidRequestException_yearLessThan(){
         //Arrange
-        CarDto oneCarDto = getOneCarDto();
-        oneCarDto.setYear(1949);
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.of(getCarMake()));
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
+        oneCarDtoRequest.setYear(1949);
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.of(getCarMake()));
         //Act
-        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.saveCar(oneCarDto));
+        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.saveCar(oneCarDtoRequest));
         //Assert
         assertEquals("'year' must be greater than or equal to 1950", response.getMessage());
     }
@@ -216,11 +231,11 @@ class CarServiceImplTest {
     @Test
     void testSaveCar_shouldThrowInvalidRequestException_yearGreaterThan(){
         //Arrange
-        CarDto oneCarDto = getOneCarDto();
-        oneCarDto.setYear(2025);
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.of(getCarMake()));
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
+        oneCarDtoRequest.setYear(2025);
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.of(getCarMake()));
         //Act
-        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.saveCar(oneCarDto));
+        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.saveCar(oneCarDtoRequest));
         //Assert
         assertEquals("'year' must be less than or equal to 2024", response.getMessage());
     }
@@ -228,11 +243,11 @@ class CarServiceImplTest {
     @Test
     void testSaveCar_shouldThrowInvalidRequestException_priceNegative(){
         //Arrange
-        CarDto oneCarDto = getOneCarDto();
-        oneCarDto.setPrice(-1);
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.of(getCarMake()));
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
+        oneCarDtoRequest.setPrice(-1);
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.of(getCarMake()));
         //Act
-        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.saveCar(oneCarDto));
+        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.saveCar(oneCarDtoRequest));
         //Assert
         assertEquals("'price' must be greater than 0", response.getMessage());
     }
@@ -240,11 +255,11 @@ class CarServiceImplTest {
     @Test
     void testSaveCar_shouldThrowInvalidRequestException_featuresEmptyArray(){
         //Arrange
-        CarDto oneCarDto = getOneCarDto();
-        oneCarDto.setFeatures(new ArrayList<>());
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.of(getCarMake()));
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
+        oneCarDtoRequest.setFeatures(new ArrayList<>());
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.of(getCarMake()));
         //Act
-        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.saveCar(oneCarDto));
+        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.saveCar(oneCarDtoRequest));
         //Assert
         assertEquals("'features' size must be between 2 and 10", response.getMessage());
     }
@@ -252,15 +267,15 @@ class CarServiceImplTest {
     @Test
     void testSaveCar_shouldThrowInvalidRequestException_featuresMaxArray(){
         //Arrange
-        CarDto oneCarDto = getOneCarDto();
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
         List<String> features = new ArrayList<>();
         for (int i = 0; i < 15; i++) {
             features.add(String.valueOf(i));
         }
-        oneCarDto.setFeatures(features);
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.of(getCarMake()));
+        oneCarDtoRequest.setFeatures(features);
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.of(getCarMake()));
         //Act
-        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.saveCar(oneCarDto));
+        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.saveCar(oneCarDtoRequest));
         //Assert
         assertEquals("'features' size must be between 2 and 10", response.getMessage());
     }
@@ -268,11 +283,11 @@ class CarServiceImplTest {
     @Test
     void testSaveCar_shouldThrowInvalidRequestException_engineNull(){
         //Arrange
-        CarDto oneCarDto = getOneCarDto();
-        oneCarDto.setEngine(null);
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.of(getCarMake()));
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
+        oneCarDtoRequest.setEngine(null);
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.of(getCarMake()));
         //Act
-        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.saveCar(oneCarDto));
+        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.saveCar(oneCarDtoRequest));
         //Assert
         assertEquals("'engine' must not be null",response.getMessage());
     }
@@ -280,16 +295,16 @@ class CarServiceImplTest {
     @Test
     void testSaveCar_shouldThrowInvalidRequestException_engineTypeIsEmpty(){
         //Arrange
-        CarDto oneCarDto = getOneCarDto();
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
         Engine engine = Engine.builder()
                 .torque(100)
                 .horsepower(100)
                 .type("")
                 .build();
-        oneCarDto.setEngine(engine);
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.of(getCarMake()));
+        oneCarDtoRequest.setEngine(engine);
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.of(getCarMake()));
         //Act
-        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.saveCar(oneCarDto));
+        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.saveCar(oneCarDtoRequest));
         //Assert
         assertEquals("'engine.type' must not be empty", response.getMessage());
     }
@@ -297,16 +312,16 @@ class CarServiceImplTest {
     @Test
     void testSaveCar_shouldThrowInvalidRequestException_engineTypeIsBlank(){
         //Arrange
-        CarDto oneCarDto = getOneCarDto();
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
         Engine engine = Engine.builder()
                 .torque(100)
                 .horsepower(100)
                 .type("  ")
                 .build();
-        oneCarDto.setEngine(engine);
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.of(getCarMake()));
+        oneCarDtoRequest.setEngine(engine);
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.of(getCarMake()));
         //Act
-        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.saveCar(oneCarDto));
+        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.saveCar(oneCarDtoRequest));
         //Assert
         assertEquals("'engine.type' must not be empty", response.getMessage());
     }
@@ -314,16 +329,16 @@ class CarServiceImplTest {
     @Test
     void testSaveCar_shouldThrowInvalidRequestException_engineTorqueIsLessThanZero(){
         //Arrange
-        CarDto oneCarDto = getOneCarDto();
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
         Engine engine = Engine.builder()
                 .torque(-100)
                 .horsepower(100)
                 .type("type")
                 .build();
-        oneCarDto.setEngine(engine);
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.of(getCarMake()));
+        oneCarDtoRequest.setEngine(engine);
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.of(getCarMake()));
         //Act
-        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.saveCar(oneCarDto));
+        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.saveCar(oneCarDtoRequest));
         //Assert
         assertEquals("'engine.torque' must be greater than or equal to 0", response.getMessage());
     }
@@ -331,16 +346,16 @@ class CarServiceImplTest {
     @Test
     void testSaveCar_shouldThrowInvalidRequestException_engineHorsepowerIsLessThanZero(){
         //Arrange
-        CarDto oneCarDto = getOneCarDto();
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
         Engine engine = Engine.builder()
                 .torque(100)
                 .horsepower(-100)
                 .type("type")
                 .build();
-        oneCarDto.setEngine(engine);
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.of(getCarMake()));
+        oneCarDtoRequest.setEngine(engine);
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.of(getCarMake()));
         //Act
-        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.saveCar(oneCarDto));
+        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.saveCar(oneCarDtoRequest));
         //Assert
         assertEquals("'engine.horsepower' must be greater than or equal to 0", response.getMessage());
     }
@@ -348,11 +363,11 @@ class CarServiceImplTest {
     @Test
     void testSaveCar_shouldThrowInvalidRequestException_previousOwnerLessThanZero(){
         //Arrange
-        CarDto oneCarDto = getOneCarDto();
-        oneCarDto.setPreviousOwner(-100);
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.of(getCarMake()));
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
+        oneCarDtoRequest.setPreviousOwner(-100);
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.of(getCarMake()));
         //Act
-        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.saveCar(oneCarDto));
+        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.saveCar(oneCarDtoRequest));
         //Assert
         assertEquals("'previousOwner' must be greater than or equal to 0", response.getMessage());
     }
@@ -360,11 +375,11 @@ class CarServiceImplTest {
     @Test
     void testSaveCar_shouldThrowInvalidRequestException_warrantyNull(){
         //Arrange
-        CarDto oneCarDto = getOneCarDto();
-        oneCarDto.setWarranty(null);
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.of(getCarMake()));
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
+        oneCarDtoRequest.setWarranty(null);
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.of(getCarMake()));
         //Act
-        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.saveCar(oneCarDto));
+        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.saveCar(oneCarDtoRequest));
         //Assert
         assertEquals("'warranty' must not be null", response.getMessage());
     }
@@ -380,28 +395,28 @@ class CarServiceImplTest {
     })
     void testSaveCar_shouldThrowInvalidRequestException_warrantyInvalid(String value, String field, String expectedMessage){
         //Arrange
-        CarDto oneCarDto = getOneCarDto();
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
         switch (field){
             case "warranty.basic":
                 if (value.equalsIgnoreCase("null")){
-                    oneCarDto.setWarranty(Warranty.builder().basic(null).powertrain("pwt").build());
+                    oneCarDtoRequest.setWarranty(Warranty.builder().basic(null).powertrain("pwt").build());
                 } else {
-                    oneCarDto.setWarranty(Warranty.builder().basic(value).powertrain("pwt").build());
+                    oneCarDtoRequest.setWarranty(Warranty.builder().basic(value).powertrain("pwt").build());
                 }
                 break;
             case "warranty.powertrain":
                 if (value.equalsIgnoreCase("null")){
-                    oneCarDto.setWarranty(Warranty.builder().basic("basic").powertrain(null).build());
+                    oneCarDtoRequest.setWarranty(Warranty.builder().basic("basic").powertrain(null).build());
                 } else {
-                    oneCarDto.setWarranty(Warranty.builder().basic("basic").powertrain(value).build());
+                    oneCarDtoRequest.setWarranty(Warranty.builder().basic("basic").powertrain(value).build());
                 }
                 break;
             default:
                 throw new IllegalStateException("Unexpected value: " + field);
         }
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.of(getCarMake()));
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.of(getCarMake()));
         //Act
-        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.saveCar(oneCarDto));
+        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.saveCar(oneCarDtoRequest));
         //Assert
         assertEquals(expectedMessage, response.getMessage());
     }
@@ -409,70 +424,70 @@ class CarServiceImplTest {
     @Test
     void testSaveCar_shouldThrowInvalidRequestException_dimensionsNull(){
         //Arrange
-        CarDto oneCarDto = getOneCarDto();
-        oneCarDto.setDimensions(null);
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.of(getCarMake()));
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
+        oneCarDtoRequest.setDimensions(null);
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.of(getCarMake()));
         //Act
-        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.saveCar(oneCarDto));
+        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.saveCar(oneCarDtoRequest));
         assertEquals("'dimensions' must not be empty", response.getMessage());
     }
 
     @Test
     void testSaveCar_shouldThrowInvalidRequestException_dimensionsLengthLessThanZero(){
         //Arrange
-        CarDto oneCarDto = getOneCarDto();
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
         Dimensions dimensions = Dimensions.builder()
                 .length(-100)
                 .height(100)
                 .weight(100)
                 .width(100)
                 .build();
-        oneCarDto.setDimensions(dimensions);
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.of(getCarMake()));
+        oneCarDtoRequest.setDimensions(dimensions);
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.of(getCarMake()));
         //Act
-        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.saveCar(oneCarDto));
+        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.saveCar(oneCarDtoRequest));
         assertEquals("'dimensions.length' must be greater than or equal to 0", response.getMessage());
     }
 
     @Test
     void testSaveCar_shouldThrowInvalidRequestException_dimensionsWidthLessThanZero(){
         //Arrange
-        CarDto oneCarDto = getOneCarDto();
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
         Dimensions dimensions = Dimensions.builder()
                 .width(-100)
                 .build();
-        oneCarDto.setDimensions(dimensions);
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.of(getCarMake()));
+        oneCarDtoRequest.setDimensions(dimensions);
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.of(getCarMake()));
         //Act
-        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.saveCar(oneCarDto));
+        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.saveCar(oneCarDtoRequest));
         assertEquals("'dimensions.width' must be greater than or equal to 0", response.getMessage());
     }
 
     @Test
     void testSaveCar_shouldThrowInvalidRequestException_dimensionsHeightLessThanZero(){
         //Arrange
-        CarDto oneCarDto = getOneCarDto();
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
         Dimensions dimensions = Dimensions.builder()
                 .height(-100)
                 .build();
-        oneCarDto.setDimensions(dimensions);
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.of(getCarMake()));
+        oneCarDtoRequest.setDimensions(dimensions);
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.of(getCarMake()));
         //Act
-        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.saveCar(oneCarDto));
+        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.saveCar(oneCarDtoRequest));
         assertEquals("'dimensions.height' must be greater than or equal to 0", response.getMessage());
     }
 
     @Test
     void testSaveCar_shouldThrowInvalidRequestException_dimensionsWeightLessThanZero(){
         //Arrange
-        CarDto oneCarDto = getOneCarDto();
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
         Dimensions dimensions = Dimensions.builder()
                 .weight(-100)
                 .build();
-        oneCarDto.setDimensions(dimensions);
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.of(getCarMake()));
+        oneCarDtoRequest.setDimensions(dimensions);
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.of(getCarMake()));
         //Act
-        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.saveCar(oneCarDto));
+        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.saveCar(oneCarDtoRequest));
         assertEquals("'dimensions.weight' must be greater than or equal to 0", response.getMessage());
     }
 
@@ -507,113 +522,113 @@ class CarServiceImplTest {
     })
     void testSaveCar_shouldThrowInvalidRequestException(String value, String field, String expectedMessage) {
         // Arrange
-        CarDto oneCarDto = getOneCarDto();
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.of(getCarMake()));
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.of(getCarMake()));
         switch (field) {
             case "make":
-                oneCarDto.setMake(value);
+                oneCarDtoRequest.setMake(value);
                 break;
             case "model":
-                oneCarDto.setModel(value);
+                oneCarDtoRequest.setModel(value);
                 break;
             case "year":
-                oneCarDto.setYear(Integer.parseInt(value));
+                oneCarDtoRequest.setYear(Integer.parseInt(value));
                 break;
             case "price":
-                oneCarDto.setPrice(Double.parseDouble(value));
+                oneCarDtoRequest.setPrice(Double.parseDouble(value));
                 break;
             case "features":
-                oneCarDto.setFeatures(Collections.emptyList());
+                oneCarDtoRequest.setFeatures(Collections.emptyList());
                 break;
             case "engine":
-                oneCarDto.setEngine(null);
+                oneCarDtoRequest.setEngine(null);
                 break;
             case "engine.type":
-                if (oneCarDto.getEngine() == null) {
-                    oneCarDto.setEngine(Engine.builder().type(value).build());
+                if (oneCarDtoRequest.getEngine() == null) {
+                    oneCarDtoRequest.setEngine(Engine.builder().type(value).build());
                 } else {
-                    oneCarDto.getEngine().setType(value);
+                    oneCarDtoRequest.getEngine().setType(value);
                 }
                 break;
             case "engine.torque":
-                if (oneCarDto.getEngine() == null) {
-                    oneCarDto.setEngine(Engine.builder().torque(Integer.parseInt(value)).build());
+                if (oneCarDtoRequest.getEngine() == null) {
+                    oneCarDtoRequest.setEngine(Engine.builder().torque(Integer.parseInt(value)).build());
                 } else {
-                    oneCarDto.getEngine().setTorque(Integer.parseInt(value));
+                    oneCarDtoRequest.getEngine().setTorque(Integer.parseInt(value));
                 }
                 break;
             case "engine.horsepower":
-                if (oneCarDto.getEngine() == null) {
-                    oneCarDto.setEngine(Engine.builder().horsepower(Integer.parseInt(value)).build());
+                if (oneCarDtoRequest.getEngine() == null) {
+                    oneCarDtoRequest.setEngine(Engine.builder().horsepower(Integer.parseInt(value)).build());
                 } else {
-                    oneCarDto.getEngine().setHorsepower(Integer.parseInt(value));
+                    oneCarDtoRequest.getEngine().setHorsepower(Integer.parseInt(value));
                 }
                 break;
             case "previousOwner":
-                oneCarDto.setPreviousOwner(Integer.parseInt(value));
+                oneCarDtoRequest.setPreviousOwner(Integer.parseInt(value));
                 break;
             case "warranty":
-                oneCarDto.setWarranty(null);
+                oneCarDtoRequest.setWarranty(null);
                 break;
             case "warranty.basic":
-                if (oneCarDto.getWarranty() == null) {
-                    oneCarDto.setWarranty(Warranty.builder().basic(value).build());
+                if (oneCarDtoRequest.getWarranty() == null) {
+                    oneCarDtoRequest.setWarranty(Warranty.builder().basic(value).build());
                 } else {
                     if (value.equals("null")){
-                        oneCarDto.getWarranty().setBasic(null);
+                        oneCarDtoRequest.getWarranty().setBasic(null);
                     } else {
-                        oneCarDto.getWarranty().setBasic(value);
+                        oneCarDtoRequest.getWarranty().setBasic(value);
                     }
                 }
                 break;
             case "warranty.powertrain":
-                if (oneCarDto.getWarranty() == null) {
-                    oneCarDto.setWarranty(Warranty.builder().powertrain(value).build());
+                if (oneCarDtoRequest.getWarranty() == null) {
+                    oneCarDtoRequest.setWarranty(Warranty.builder().powertrain(value).build());
                 } else {
                     if (value.equalsIgnoreCase("null")){
-                        oneCarDto.getWarranty().setPowertrain(null);
+                        oneCarDtoRequest.getWarranty().setPowertrain(null);
                     }else {
-                        oneCarDto.getWarranty().setPowertrain(value);
+                        oneCarDtoRequest.getWarranty().setPowertrain(value);
                     }
                 }
                 break;
             case "dimensions":
-                oneCarDto.setDimensions(null);
+                oneCarDtoRequest.setDimensions(null);
                 break;
             case "dimensions.length":
-                if (oneCarDto.getDimensions() == null) {
-                    oneCarDto.setDimensions(Dimensions.builder().length(Integer.parseInt(value)).build());
+                if (oneCarDtoRequest.getDimensions() == null) {
+                    oneCarDtoRequest.setDimensions(Dimensions.builder().length(Integer.parseInt(value)).build());
                 } else {
-                    oneCarDto.getDimensions().setLength(Integer.parseInt(value));
+                    oneCarDtoRequest.getDimensions().setLength(Integer.parseInt(value));
                 }
                 break;
             case "dimensions.width":
-                if (oneCarDto.getDimensions() == null) {
-                    oneCarDto.setDimensions(Dimensions.builder().width(Integer.parseInt(value)).build());
+                if (oneCarDtoRequest.getDimensions() == null) {
+                    oneCarDtoRequest.setDimensions(Dimensions.builder().width(Integer.parseInt(value)).build());
                 } else {
-                    oneCarDto.getDimensions().setWidth(Integer.parseInt(value));
+                    oneCarDtoRequest.getDimensions().setWidth(Integer.parseInt(value));
                 }
                 break;
             case "dimensions.height":
-                if (oneCarDto.getDimensions() == null) {
-                    oneCarDto.setDimensions(Dimensions.builder().height(Integer.parseInt(value)).build());
+                if (oneCarDtoRequest.getDimensions() == null) {
+                    oneCarDtoRequest.setDimensions(Dimensions.builder().height(Integer.parseInt(value)).build());
                 } else {
-                    oneCarDto.getDimensions().setHeight(Integer.parseInt(value));
+                    oneCarDtoRequest.getDimensions().setHeight(Integer.parseInt(value));
                 }
                 break;
             case "dimensions.weight":
-                if (oneCarDto.getDimensions() == null) {
-                    oneCarDto.setDimensions(Dimensions.builder().weight(Integer.parseInt(value)).build());
+                if (oneCarDtoRequest.getDimensions() == null) {
+                    oneCarDtoRequest.setDimensions(Dimensions.builder().weight(Integer.parseInt(value)).build());
                 } else {
-                    oneCarDto.getDimensions().setWeight(Integer.parseInt(value));
+                    oneCarDtoRequest.getDimensions().setWeight(Integer.parseInt(value));
                 }
                 break;
             default:
                 throw new IllegalStateException("Unexpected value: " + field);
         }
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.of(getCarMake()));
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.of(getCarMake()));
         // Act
-        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.saveCar(oneCarDto));
+        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.saveCar(oneCarDtoRequest));
 
         // Assert
         assertEquals(expectedMessage, response.getMessage());
@@ -621,31 +636,31 @@ class CarServiceImplTest {
 
     @Test
     void testSaveCar_shouldThrowResourceConversionException_whenJsonProcessingException() throws JsonProcessingException {
-        CarDto oneCarDto = getOneCarDto();
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.of(getCarMake()));
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.of(getCarMake()));
         doThrow(JsonProcessingException.class).when(objectMapper).writeValueAsString(any());
-        ResourceConversionException response = assertThrows(ResourceConversionException.class, () -> carServiceImpl.saveCar(oneCarDto));
+        ResourceConversionException response = assertThrows(ResourceConversionException.class, () -> carServiceImpl.saveCar(oneCarDtoRequest));
         assertNotNull(response.getMessage());
         assertEquals("Error while serializing CarDto to Car", response.getMessage());
     }
 
     @Test
     void testSaveCar_shouldThrowResourceNotFoundException_makeNotFound(){
-        CarDto oneCarDto = getOneCarDto();
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.empty());
-        ResourceNotFoundException response = assertThrows(ResourceNotFoundException.class, () -> carServiceImpl.saveCar(oneCarDto));
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.empty());
+        ResourceNotFoundException response = assertThrows(ResourceNotFoundException.class, () -> carServiceImpl.saveCar(oneCarDtoRequest));
         assertNotNull(response.getMessage());
         assertEquals("Car Make not found with make : 'Make'", response.getMessage());
     }
 
     @Test
     void testUpdateCar_shouldThrowResourceConversionException_whenJsonProcessingException() throws JsonProcessingException {
-        CarDto oneCarDto = getOneCarDto();
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
         Car oneCar = getOneCar();
         when(carRepository.findById(1L)).thenReturn(Optional.of(oneCar));
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.of(getCarMake()));
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.of(getCarMake()));
         doThrow(JsonProcessingException.class).when(objectMapper).writeValueAsString(any());
-        ResourceConversionException response = assertThrows(ResourceConversionException.class, () -> carServiceImpl.updateCar(1L, oneCarDto));
+        ResourceConversionException response = assertThrows(ResourceConversionException.class, () -> carServiceImpl.updateCar(1L, oneCarDtoRequest));
         assertNotNull(response.getMessage());
         assertEquals("Error while serializing CarDto to Car", response.getMessage());
     }
@@ -653,19 +668,19 @@ class CarServiceImplTest {
     @Test
     void testUpdateCar_shouldReturnUpdatedCar() throws IOException {
         //Arrange
-        CarDto oneCarDto = getOneCarDto();
-        oneCarDto.setMake("Make Update");
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
+        oneCarDtoRequest.setMake("Make Update");
         Car oneCar = getOneCar();
         CarMake carMake = getCarMake();
         carMake.setName("Make Update");
         oneCar.setCarMake(carMake);
         when(carRepository.findById(1L)).thenReturn(Optional.of(oneCar));
         when(carMakeRepository.findByName("Make Update")).thenReturn(Optional.of(carMake));
-        when(objectMapper.writeValueAsString(oneCarDto.getEngine())).thenReturn(oneCar.getEngine());
-        when(objectMapper.writeValueAsString(oneCarDto.getWarranty())).thenReturn(oneCar.getWarranty());
-        when(objectMapper.writeValueAsString(oneCarDto.getDimensions())).thenReturn(oneCar.getDimensions());
-        when(objectMapper.writeValueAsString(oneCarDto.getFeatures())).thenReturn(oneCar.getFeatures());
-        when(objectMapper.writeValueAsString(oneCarDto.getMaintenanceDates())).thenReturn(oneCar.getMaintenanceDates());
+        when(objectMapper.writeValueAsString(oneCarDtoRequest.getEngine())).thenReturn(oneCar.getEngine());
+        when(objectMapper.writeValueAsString(oneCarDtoRequest.getWarranty())).thenReturn(oneCar.getWarranty());
+        when(objectMapper.writeValueAsString(oneCarDtoRequest.getDimensions())).thenReturn(oneCar.getDimensions());
+        when(objectMapper.writeValueAsString(oneCarDtoRequest.getFeatures())).thenReturn(oneCar.getFeatures());
+        when(objectMapper.writeValueAsString(oneCarDtoRequest.getMaintenanceDates())).thenReturn(oneCar.getMaintenanceDates());
         when(objectMapper.readValue(getFeatures(), String[].class)).thenReturn(getCarDtoFeatures());
         when(objectMapper.readValue(getEngine(), Engine.class)).thenReturn(getCarDtoEngine());
         when(objectMapper.readValue(getWarranty(), Warranty.class)).thenReturn(getCarDtoWarranty());
@@ -673,7 +688,7 @@ class CarServiceImplTest {
         when(objectMapper.readValue(getDimensions(), Dimensions.class)).thenReturn(getCarDtoDimensions());
         when(carRepository.save(any(Car.class))).thenReturn(oneCar);
         //Act
-        CarDto response = carServiceImpl.updateCar(1L, oneCarDto);
+        CarDtoResponse response = carServiceImpl.updateCar(1L, oneCarDtoRequest);
         //Assert
         assertNotNull(response.getId());
     }
@@ -681,10 +696,10 @@ class CarServiceImplTest {
     @Test
     void testUpdateCar_shouldThrowNotFoundException(){
         //Arrange
-        CarDto oneCarDto = getOneCarDto();
-        oneCarDto.setMake("make update");
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
+        oneCarDtoRequest.setMake("make update");
         //Act
-        ResourceNotFoundException response = assertThrows(ResourceNotFoundException.class, () -> carServiceImpl.updateCar(1L, oneCarDto));
+        ResourceNotFoundException response = assertThrows(ResourceNotFoundException.class, () -> carServiceImpl.updateCar(1L, oneCarDtoRequest));
         //Assert
         assertNotNull(response);
         assertEquals("Car not found with id : '1'", response.getMessage());
@@ -693,13 +708,13 @@ class CarServiceImplTest {
     @Test
     void testUpdateCar_shouldThrowInvalidRequestException_makeNull(){
         //Arrange
-        CarDto oneCarDto = getOneCarDto();
-        oneCarDto.setMake(null);
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
+        oneCarDtoRequest.setMake(null);
         Car oneCar = getOneCar();
         when(carRepository.findById(1L)).thenReturn(Optional.of(oneCar));
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.of(getCarMake()));
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.of(getCarMake()));
         //Act
-        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.updateCar(1L, oneCarDto));
+        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.updateCar(1L, oneCarDtoRequest));
         //Assert
         assertNotNull(response);
         assertEquals("'make' must not be empty", response.getMessage());
@@ -708,13 +723,13 @@ class CarServiceImplTest {
     @Test
     void testUpdateCar_shouldThrowInvalidRequestException_makeEmpty(){
         //Arrange
-        CarDto oneCarDto = getOneCarDto();
-        oneCarDto.setMake("");
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
+        oneCarDtoRequest.setMake("");
         Car oneCar = getOneCar();
         when(carRepository.findById(1L)).thenReturn(Optional.of(oneCar));
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.of(getCarMake()));
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.of(getCarMake()));
         //Act
-        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.updateCar(1L, oneCarDto));
+        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.updateCar(1L, oneCarDtoRequest));
         //Assert
         assertNotNull(response.getMessage());
         assertEquals("'make' must not be empty", response.getMessage());
@@ -724,12 +739,12 @@ class CarServiceImplTest {
     void testUpdateCar_shouldThrowInvalidRequestException_makeBlank(){
         //Arrange
         Car oneCar = getOneCar();
-        CarDto oneCarDto = getOneCarDto();
-        oneCarDto.setMake("  ");
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
+        oneCarDtoRequest.setMake("  ");
         when(carRepository.findById(1L)).thenReturn(Optional.of(oneCar));
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.of(getCarMake()));
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.of(getCarMake()));
         //Act
-        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.updateCar(1L, oneCarDto));
+        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.updateCar(1L, oneCarDtoRequest));
         //Assert
         assertNotNull(response.getMessage());
         assertEquals("'make' must not be empty", response.getMessage());
@@ -744,16 +759,16 @@ class CarServiceImplTest {
     void testUpdateCar_shouldThrowInvalidRequestException_modelInvalid(String value, String expectedMessage){
         //Arrange
         Car oneCar = getOneCar();
-        CarDto oneCarDto = getOneCarDto();
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
         if (value.equalsIgnoreCase("null")){
-            oneCarDto.setModel(null);
+            oneCarDtoRequest.setModel(null);
         } else {
-            oneCarDto.setModel(value);
+            oneCarDtoRequest.setModel(value);
         }
         when(carRepository.findById(1L)).thenReturn(Optional.of(oneCar));
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.of(getCarMake()));
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.of(getCarMake()));
         //Act
-        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.updateCar(1L, oneCarDto));
+        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.updateCar(1L, oneCarDtoRequest));
         //Assert
         assertNotNull(response.getMessage());
         assertEquals(expectedMessage, response.getMessage());
@@ -763,12 +778,12 @@ class CarServiceImplTest {
     void testUpdateCar_shouldThrowInvalidRequestException_yearLessThan(){
         //Arrange
         Car oneCar = getOneCar();
-        CarDto oneCarDto = getOneCarDto();
-        oneCarDto.setYear(1949);
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
+        oneCarDtoRequest.setYear(1949);
         when(carRepository.findById(1L)).thenReturn(Optional.of(oneCar));
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.of(getCarMake()));
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.of(getCarMake()));
         //Act
-        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.updateCar(1L, oneCarDto));
+        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.updateCar(1L, oneCarDtoRequest));
         //Assert
         assertNotNull(response.getMessage());
         assertEquals("'year' must be greater than or equal to 1950", response.getMessage());
@@ -778,12 +793,12 @@ class CarServiceImplTest {
     void testUpdateCar_shouldThrowInvalidRequestException_yearGreaterThan(){
         //Arrange
         Car oneCar = getOneCar();
-        CarDto oneCarDto = getOneCarDto();
-        oneCarDto.setYear(2045);
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
+        oneCarDtoRequest.setYear(2045);
         when(carRepository.findById(1L)).thenReturn(Optional.of(oneCar));
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.of(getCarMake()));
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.of(getCarMake()));
         //Act
-        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.updateCar(1L, oneCarDto));
+        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.updateCar(1L, oneCarDtoRequest));
         //Assert
         assertNotNull(response.getMessage());
         assertEquals("'year' must be less than or equal to 2024", response.getMessage());
@@ -793,12 +808,12 @@ class CarServiceImplTest {
     void testUpdateCar_shouldThrowInvalidRequestException_priceLessThanZero(){
         //Arrange
         Car oneCar = getOneCar();
-        CarDto oneCarDto = getOneCarDto();
-        oneCarDto.setPrice(-1);
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
+        oneCarDtoRequest.setPrice(-1);
         when(carRepository.findById(1L)).thenReturn(Optional.of(oneCar));
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.of(getCarMake()));
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.of(getCarMake()));
         //Act
-        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.updateCar(1L, oneCarDto));
+        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.updateCar(1L, oneCarDtoRequest));
         //Assert
         assertNotNull(response.getMessage());
         assertEquals("'price' must be greater than 0", response.getMessage());
@@ -808,12 +823,12 @@ class CarServiceImplTest {
     void testUpdateCar_shouldThrowInvalidRequestException_featuresIsNull(){
         //Arrange
         Car oneCar = getOneCar();
-        CarDto oneCarDto = getOneCarDto();
-        oneCarDto.setFeatures(null);
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
+        oneCarDtoRequest.setFeatures(null);
         when(carRepository.findById(1L)).thenReturn(Optional.of(oneCar));
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.of(getCarMake()));
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.of(getCarMake()));
         //Act
-        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.updateCar(1L, oneCarDto));
+        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.updateCar(1L, oneCarDtoRequest));
         //Assert
         assertNotNull(response.getMessage());
         assertEquals("'features' size must be between 2 and 10", response.getMessage());
@@ -823,12 +838,12 @@ class CarServiceImplTest {
     void testUpdateCar_shouldThrowInvalidRequestException_featuresIsEmpty(){
         //Arrange
         Car oneCar = getOneCar();
-        CarDto oneCarDto = getOneCarDto();
-        oneCarDto.setFeatures(new ArrayList<>());
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
+        oneCarDtoRequest.setFeatures(new ArrayList<>());
         when(carRepository.findById(1L)).thenReturn(Optional.of(oneCar));
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.of(getCarMake()));
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.of(getCarMake()));
         //Act
-        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.updateCar(1L, oneCarDto));
+        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.updateCar(1L, oneCarDtoRequest));
         //Assert
         assertNotNull(response.getMessage());
         assertEquals("'features' size must be between 2 and 10", response.getMessage());
@@ -838,16 +853,16 @@ class CarServiceImplTest {
     void testUpdateCar_shouldThrowInvalidRequestException_featuresIsGreaterThan(){
         //Arrange
         Car oneCar = getOneCar();
-        CarDto oneCarDto = getOneCarDto();
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
         List<String> features = new ArrayList<>();
         for (int i = 0; i < 15; i++) {
             features.add(String.valueOf(i));
         }
-        oneCarDto.setFeatures(features);
+        oneCarDtoRequest.setFeatures(features);
         when(carRepository.findById(1L)).thenReturn(Optional.of(oneCar));
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.of(getCarMake()));
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.of(getCarMake()));
         //Act
-        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.updateCar(1L, oneCarDto));
+        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.updateCar(1L, oneCarDtoRequest));
         //Assert
         assertNotNull(response.getMessage());
         assertEquals("'features' size must be between 2 and 10", response.getMessage());
@@ -857,12 +872,12 @@ class CarServiceImplTest {
     void testUpdateCar_shouldThrowInvalidRequestException_EngineIsNull(){
         //Arrange
         Car oneCar = getOneCar();
-        CarDto oneCarDto = getOneCarDto();
-        oneCarDto.setEngine(null);
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
+        oneCarDtoRequest.setEngine(null);
         when(carRepository.findById(1L)).thenReturn(Optional.of(oneCar));
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.of(getCarMake()));
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.of(getCarMake()));
         //Act
-        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.updateCar(1L, oneCarDto));
+        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.updateCar(1L, oneCarDtoRequest));
         //Assert
         assertNotNull(response.getMessage());
         assertEquals("'engine' must not be null", response.getMessage());
@@ -872,17 +887,17 @@ class CarServiceImplTest {
     void testUpdateCar_shouldThrowInvalidRequestException_engineTypeIsNull(){
         //Arrange
         Car oneCar = getOneCar();
-        CarDto oneCarDto = getOneCarDto();
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
         Engine engine = Engine.builder()
                 .type(null)
                 .horsepower(100)
                 .torque(100)
                 .build();
-        oneCarDto.setEngine(engine);
+        oneCarDtoRequest.setEngine(engine);
         when(carRepository.findById(1L)).thenReturn(Optional.of(oneCar));
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.of(getCarMake()));
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.of(getCarMake()));
         //Act
-        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.updateCar(1L, oneCarDto));
+        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.updateCar(1L, oneCarDtoRequest));
         //Assert
         assertNotNull(response.getMessage());
         assertEquals("'engine.type' must not be empty", response.getMessage());
@@ -892,14 +907,14 @@ class CarServiceImplTest {
     void testUpdateCar_shouldThrowInvalidRequestException_engineTypeIsEmpty(){
         //Arrange
         Car oneCar = getOneCar();
-        CarDto oneCarDto = getOneCarDto();
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
         Engine carDtoEngine = getCarDtoEngine();
         carDtoEngine.setType("");
-        oneCarDto.setEngine(carDtoEngine);
+        oneCarDtoRequest.setEngine(carDtoEngine);
         when(carRepository.findById(1L)).thenReturn(Optional.of(oneCar));
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.of(getCarMake()));
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.of(getCarMake()));
         //Act
-        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.updateCar(1L, oneCarDto));
+        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.updateCar(1L, oneCarDtoRequest));
         //Assert
         assertNotNull(response.getMessage());
         assertEquals("'engine.type' must not be empty", response.getMessage());
@@ -909,14 +924,14 @@ class CarServiceImplTest {
     void testUpdateCar_shouldThrowInvalidRequestException_engineTypeIsBlank(){
         //Arrange
         Car oneCar = getOneCar();
-        CarDto oneCarDto = getOneCarDto();
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
         Engine engine = getCarDtoEngine();
         engine.setType(" ");
-        oneCarDto.setEngine(engine);
+        oneCarDtoRequest.setEngine(engine);
         when(carRepository.findById(1L)).thenReturn(Optional.of(oneCar));
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.of(getCarMake()));
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.of(getCarMake()));
         //Act
-        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.updateCar(1L, oneCarDto));
+        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.updateCar(1L, oneCarDtoRequest));
         //Assert
         assertNotNull(response.getMessage());
         assertEquals("'engine.type' must not be empty", response.getMessage());
@@ -926,14 +941,14 @@ class CarServiceImplTest {
     void testUpdateCar_shouldThrowInvalidRequestException_engineTorqueIsLessThan(){
         //Arrange
         Car oneCar = getOneCar();
-        CarDto oneCarDto = getOneCarDto();
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
         Engine carDtoEngine = getCarDtoEngine();
         carDtoEngine.setTorque(-1);
-        oneCarDto.setEngine(carDtoEngine);
+        oneCarDtoRequest.setEngine(carDtoEngine);
         when(carRepository.findById(1L)).thenReturn(Optional.of(oneCar));
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.of(getCarMake()));
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.of(getCarMake()));
         //Act
-        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.updateCar(1L, oneCarDto));
+        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.updateCar(1L, oneCarDtoRequest));
         //Assert
         assertNotNull(response.getMessage());
         assertEquals("'engine.torque' must be greater than or equal to 0", response.getMessage());
@@ -943,14 +958,14 @@ class CarServiceImplTest {
     void testUpdateCar_shouldThrowInvalidRequestException_engineHorsepowerIsLessThan(){
         //Arrange
         Car oneCar = getOneCar();
-        CarDto oneCarDto = getOneCarDto();
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
         Engine carDtoEngine = getCarDtoEngine();
         carDtoEngine.setHorsepower(-1);
-        oneCarDto.setEngine(carDtoEngine);
+        oneCarDtoRequest.setEngine(carDtoEngine);
         when(carRepository.findById(1L)).thenReturn(Optional.of(oneCar));
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.of(getCarMake()));
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.of(getCarMake()));
         //Act
-        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.updateCar(1L, oneCarDto));
+        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.updateCar(1L, oneCarDtoRequest));
         //Assert
         assertNotNull(response.getMessage());
         assertEquals("'engine.horsepower' must be greater than or equal to 0", response.getMessage());
@@ -961,12 +976,12 @@ class CarServiceImplTest {
     void testUpdateCar_shouldThrowInvalidRequestException_previousOwnerIsLessThan(){
         //Arrange
         Car oneCar = getOneCar();
-        CarDto oneCarDto = getOneCarDto();
-        oneCarDto.setPreviousOwner(-1);
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
+        oneCarDtoRequest.setPreviousOwner(-1);
         when(carRepository.findById(1L)).thenReturn(Optional.of(oneCar));
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.of(getCarMake()));
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.of(getCarMake()));
         //Act
-        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.updateCar(1L, oneCarDto));
+        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.updateCar(1L, oneCarDtoRequest));
         //Assert
         assertNotNull(response.getMessage());
         assertEquals("'previousOwner' must be greater than or equal to 0", response.getMessage());
@@ -975,12 +990,12 @@ class CarServiceImplTest {
     @Test
     void testUpdateCar_shouldThrowInvalidRequestException_warrantyIsNull(){
         Car oneCar = getOneCar();
-        CarDto oneCarDto = getOneCarDto();
-        oneCarDto.setWarranty(null);
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
+        oneCarDtoRequest.setWarranty(null);
         when(carRepository.findById(1L)).thenReturn(Optional.of(oneCar));
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.of(getCarMake()));
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.of(getCarMake()));
         //Act
-        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.updateCar(1L, oneCarDto));
+        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.updateCar(1L, oneCarDtoRequest));
         //Assert
         assertNotNull(response.getMessage());
         assertEquals("'warranty' must not be null", response.getMessage());
@@ -997,9 +1012,9 @@ class CarServiceImplTest {
     })
     void testUpdateCar_shouldThrowInvalidRequest_warrantyFields(String value, String field, String expectedMessage){
         Car oneCar = getOneCar();
-        CarDto oneCarDto = getOneCarDto();
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
         when(carRepository.findById(1L)).thenReturn(Optional.of(oneCar));
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.of(getCarMake()));
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.of(getCarMake()));
         Warranty carDtoWarranty = getCarDtoWarranty();
         switch (field) {
             case "warranty.basic":
@@ -1008,7 +1023,7 @@ class CarServiceImplTest {
                 } else {
                     carDtoWarranty.setBasic(value);
                 }
-                oneCarDto.setWarranty(carDtoWarranty);
+                oneCarDtoRequest.setWarranty(carDtoWarranty);
                 break;
             case "warranty.powertrain":
                 if (value.equalsIgnoreCase("null")){
@@ -1016,13 +1031,13 @@ class CarServiceImplTest {
                 } else {
                     carDtoWarranty.setPowertrain(value);
                 }
-                oneCarDto.setWarranty(carDtoWarranty);
+                oneCarDtoRequest.setWarranty(carDtoWarranty);
                 break;
             default:
                 throw new IllegalStateException("Unexpected value: " + field);
         }
         //Act
-        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.updateCar(1L, oneCarDto));
+        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.updateCar(1L, oneCarDtoRequest));
         //Assert
         assertNotNull(response.getMessage());
         assertEquals(expectedMessage, response.getMessage());
@@ -1031,11 +1046,11 @@ class CarServiceImplTest {
     @Test
     void testUpdateCar_shouldThrowInvalidRequest_maintenanceDatesNull(){
         Car oneCar = getOneCar();
-        CarDto oneCarDto = getOneCarDto();
-        oneCarDto.setMaintenanceDates(null);
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
+        oneCarDtoRequest.setMaintenanceDates(null);
         when(carRepository.findById(1L)).thenReturn(Optional.of(oneCar));
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.of(getCarMake()));
-        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.updateCar(1L, oneCarDto));
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.of(getCarMake()));
+        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.updateCar(1L, oneCarDtoRequest));
         assertNotNull(response.getMessage());
         assertEquals("'maintenanceDates' must not be null", response.getMessage());
     }
@@ -1043,11 +1058,11 @@ class CarServiceImplTest {
     @Test
     void testUpdateCar_shouldThrowInvalidRequest_maintenanceDatesIsEmpty(){
         Car oneCar = getOneCar();
-        CarDto oneCarDto = getOneCarDto();
-        oneCarDto.setMaintenanceDates(new ArrayList<>());
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.of(getCarMake()));
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
+        oneCarDtoRequest.setMaintenanceDates(new ArrayList<>());
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.of(getCarMake()));
         when(carRepository.findById(1L)).thenReturn(Optional.of(oneCar));
-        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.updateCar(1L, oneCarDto));
+        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.updateCar(1L, oneCarDtoRequest));
         assertNotNull(response.getMessage());
         assertEquals("'maintenanceDates' must be between 2 and 10", response.getMessage());
     }
@@ -1055,15 +1070,15 @@ class CarServiceImplTest {
     @Test
     void testUpdateCar_shouldThrowInvalidRequest_maintenanceDatesMax(){
         Car oneCar = getOneCar();
-        CarDto oneCarDto = getOneCarDto();
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
         List<LocalDate> maintenanceDates = new ArrayList<>();
         for (int i = 0; i < 15; i++) {
             maintenanceDates.add(LocalDate.now());
         }
-        oneCarDto.setMaintenanceDates(maintenanceDates);
+        oneCarDtoRequest.setMaintenanceDates(maintenanceDates);
         when(carRepository.findById(1L)).thenReturn(Optional.of(oneCar));
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.of(getCarMake()));
-        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.updateCar(1L, oneCarDto));
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.of(getCarMake()));
+        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.updateCar(1L, oneCarDtoRequest));
         assertNotNull(response.getMessage());
         assertEquals("'maintenanceDates' must be between 2 and 10", response.getMessage());
     }
@@ -1071,11 +1086,11 @@ class CarServiceImplTest {
     @Test
     void testUpdateCar_shouldThrowInvalidRequest_dimensionsIsNull(){
         Car oneCar = getOneCar();
-        CarDto oneCarDto = getOneCarDto();
-        oneCarDto.setDimensions(null);
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
+        oneCarDtoRequest.setDimensions(null);
         when(carRepository.findById(1L)).thenReturn(Optional.of(oneCar));
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.of(getCarMake()));
-        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.updateCar(1L, oneCarDto));
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.of(getCarMake()));
+        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.updateCar(1L, oneCarDtoRequest));
         assertNotNull(response.getMessage());
         assertEquals("'dimensions' must not be empty", response.getMessage());
     }
@@ -1089,7 +1104,7 @@ class CarServiceImplTest {
     })
     void testUpdateCar_shouldThrowInvalidRequest_dimensions(String value, String field, String expectedMessage){
         Car oneCar = getOneCar();
-        CarDto oneCarDto = getOneCarDto();
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
         Dimensions carDtoDimensions = getCarDtoDimensions();
         when(carRepository.findById(1L)).thenReturn(Optional.of(oneCar));
         switch (field){
@@ -1108,20 +1123,20 @@ class CarServiceImplTest {
             default:
                 throw new IllegalArgumentException("Unexpected Value : "+field);
         }
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.of(getCarMake()));
-        oneCarDto.setDimensions(carDtoDimensions);
-        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.updateCar(1L, oneCarDto));
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.of(getCarMake()));
+        oneCarDtoRequest.setDimensions(carDtoDimensions);
+        InvalidRequestException response = assertThrows(InvalidRequestException.class, () -> carServiceImpl.updateCar(1L, oneCarDtoRequest));
         assertNotNull(response.getMessage());
         assertEquals(expectedMessage, response.getMessage());
     }
 
     @Test
     void testUpdateCar_shouldThrowResourceNotFoundException_carMakeNotFound(){
-        CarDto oneCarDto = getOneCarDto();
+        CarDtoRequest oneCarDtoRequest = getOneCarDto();
         Car oneCar = getOneCar();
         when(carRepository.findById(1L)).thenReturn(Optional.of(oneCar));
-        when(carMakeRepository.findByName(oneCarDto.getMake())).thenReturn(Optional.empty());
-        ResourceNotFoundException response = assertThrows(ResourceNotFoundException.class, () -> carServiceImpl.updateCar(1L, oneCarDto));
+        when(carMakeRepository.findByName(oneCarDtoRequest.getMake())).thenReturn(Optional.empty());
+        ResourceNotFoundException response = assertThrows(ResourceNotFoundException.class, () -> carServiceImpl.updateCar(1L, oneCarDtoRequest));
         assertNotNull(response.getMessage());
         assertEquals("Car Make not found with make : 'Make'", response.getMessage());
     }
@@ -1168,6 +1183,9 @@ class CarServiceImplTest {
                     .warranty(getWarranty())
                     .maintenanceDates(getMaintenanceDates())
                     .dimensions(getDimensions())
+                    .createdAt(ZonedDateTime.now().toEpochSecond())
+                    .updatedAt(ZonedDateTime.now().toEpochSecond())
+                    .status(CarStatus.ACTIVE.getValue())
                     .build();
             cars.add(car);
         }
@@ -1196,6 +1214,9 @@ class CarServiceImplTest {
                 .warranty(getWarranty())
                 .maintenanceDates(getMaintenanceDates())
                 .dimensions(getDimensions())
+                .createdAt(ZonedDateTime.now().toEpochSecond())
+                .updatedAt(null)
+                .status(CarStatus.ACTIVE.getValue())
                 .build();
     }
 
@@ -1249,8 +1270,8 @@ class CarServiceImplTest {
                 .build().toString();
     }
 
-    private CarDto getOneCarDto(){
-        return CarDto.builder()
+    private CarDtoRequest getOneCarDto(){
+        return CarDtoRequest.builder()
                 .id(1L)
                 .make("Make")
                 .model("Model")

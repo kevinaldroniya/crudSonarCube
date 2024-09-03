@@ -63,7 +63,7 @@ class CarControllerTest {
                 .andExpect(status().isOk())
                 //Assert
                 .andDo(result -> {
-                    List<CarDto> cars = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {
+                    List<CarDtoResponse> cars = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {
                     });
                     List<Car> carRepositoryAll = carRepository.findAll();
                     assertEquals(carRepositoryAll.size(), cars.size());
@@ -83,7 +83,7 @@ class CarControllerTest {
                 .andExpect(status().isOk())
                 //Assert
                 .andDo(result -> {
-                    List<CarDto> cars = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {
+                    List<CarDtoRequest> cars = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {
                     });
                     assertTrue(cars.isEmpty());
                 });
@@ -115,7 +115,7 @@ class CarControllerTest {
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andDo(result -> {
-                    CarDto response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {
+                    CarDtoRequest response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {
                     });
                     assertNotNull(response);
                     assertEquals(carId, response.getId());
@@ -184,21 +184,21 @@ class CarControllerTest {
     @Test
     void testSaveCar_shouldReturnCarDto() throws Exception{
         //Arrange
-        CarDto carDto = getOneCarDto();
+        CarDtoRequest carDtoRequest = getOneCarDto();
         //Act
         mockMvc.perform(post("/car")
                 .accept(MediaType.APPLICATION_JSON)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(carDto)))
+                .content(objectMapper.writeValueAsString(carDtoRequest)))
                 //assert
                 .andExpect(status().isCreated())
                 .andDo(result -> {
-                    CarDto response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {
+                    CarDtoRequest response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {
                     });
                     List<Car> carList = carRepository.findAll();
                     Car car = carList.get(carList.size() - 1);
                     assertNotNull(response);
-                    assertEquals(carDto.getMake(), car.getCarMake().getName());
+                    assertEquals(carDtoRequest.getMake(), car.getCarMake().getName());
                 });
     }
 
@@ -866,11 +866,11 @@ class CarControllerTest {
                 //Assert
                 .andExpect(status().isOk())
                 .andDo(result -> {
-                    CarDto carDto = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {
+                    CarDtoRequest carDtoRequest = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {
                     });
-                    assertNotNull(carDto.getId());
-                    assertEquals(id, carDto.getId());
-                    assertEquals("Test",carDto.getMake());
+                    assertNotNull(carDtoRequest.getId());
+                    assertEquals(id, carDtoRequest.getId());
+                    assertEquals("Test", carDtoRequest.getMake());
                 });
 
     }
@@ -1439,6 +1439,9 @@ class CarControllerTest {
                 .warranty(convertWarrantyToJson())
                 .maintenanceDates(convertMaintenanceDatesToJson())
                 .dimensions(convertDimensionsToJson())
+                .createdAt(ZonedDateTime.now().toEpochSecond())
+                .updatedAt(ZonedDateTime.now().toEpochSecond())
+                .status(CarStatus.ARCHIVE.getValue())
                 .build();
     }
 
@@ -1457,11 +1460,14 @@ class CarControllerTest {
                 .warranty("Basic,Powertrain")
                 .maintenanceDates("2021-08-01,2021-08-02,2021-08-03")
                 .dimensions("100,50,30")
+                .createdAt(ZonedDateTime.now().toEpochSecond())
+                .updatedAt(ZonedDateTime.now().toEpochSecond())
+                .status(CarStatus.ACTIVE.getValue())
                 .build();
     }
 
-    private CarDto getOneCarDto(){
-        return CarDto.builder()
+    private CarDtoRequest getOneCarDto(){
+        return CarDtoRequest.builder()
                 //.id(1L)
                 .make("Test")
                 .model("Model")

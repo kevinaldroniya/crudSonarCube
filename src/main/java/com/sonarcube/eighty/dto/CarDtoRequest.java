@@ -14,7 +14,7 @@ import java.util.List;
 @Setter
 @AllArgsConstructor
 @Builder
-public class CarDto {
+public class CarDtoRequest {
     @Nullable
     private Long id;
 

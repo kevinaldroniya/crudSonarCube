@@ -1,13 +1,14 @@
 package com.sonarcube.eighty.service;
 
-import com.sonarcube.eighty.dto.CarDto;
+import com.sonarcube.eighty.dto.CarDtoRequest;
+import com.sonarcube.eighty.dto.CarDtoResponse;
 
 import java.util.List;
 
 public interface CarService {
-    List<CarDto> getAllCars();
-    CarDto getCarById(Long id);
-    CarDto saveCar(CarDto carDto);
-    CarDto updateCar(Long id, CarDto carDto);
+    List<CarDtoResponse> getAllCars();
+    CarDtoResponse getCarById(Long id);
+    CarDtoResponse saveCar(CarDtoRequest carDtoRequest);
+    CarDtoResponse updateCar(Long id, CarDtoRequest carDtoRequest);
     String deleteCar(Long id);
 }

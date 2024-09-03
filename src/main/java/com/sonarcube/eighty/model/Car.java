@@ -35,6 +35,12 @@ public class Car {
     private String maintenanceDates;
     @Column(name = "dimensions")
     private String dimensions;
+    @Column(name = "created_at")
+    private Long createdAt;
+    @Column(name = "updated_at")
+    private Long updatedAt;
+    @Column(name = "status")
+    private String status;
     @ManyToOne
     @JoinColumn(name = "make_id", nullable = false)
     private CarMake carMake;

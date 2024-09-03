@@ -2,10 +2,7 @@ package com.sonarcube.eighty.service.implementation;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sonarcube.eighty.dto.CarDto;
-import com.sonarcube.eighty.dto.Dimensions;
-import com.sonarcube.eighty.dto.Engine;
-import com.sonarcube.eighty.dto.Warranty;
+import com.sonarcube.eighty.dto.*;
 import com.sonarcube.eighty.exception.InvalidRequestException;
 import com.sonarcube.eighty.exception.ResourceConversionException;
 import com.sonarcube.eighty.exception.ResourceNotFoundException;
@@ -18,7 +15,10 @@ import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.*;
 
 @Service
@@ -32,13 +32,13 @@ public class CarServiceImpl implements CarService {
     private static final String CAR = "Car";
 
     @Override
-    public List<CarDto> getAllCars() {
+    public List<CarDtoResponse> getAllCars() {
         // Car to CarDto conversion
         List<Car> cars = carRepository.findAll();
         return cars.stream()
                 .map(car -> {
                     try {
-                        return convertToDto(car);
+                        return convertToDtoResponse(car);
                     } catch (JsonProcessingException e) {
                         throw new ResourceConversionException(CAR, CAR_DTO);
                     }
@@ -48,46 +48,49 @@ public class CarServiceImpl implements CarService {
 
 
     @Override
-    public CarDto getCarById(Long id) {
+    public CarDtoResponse getCarById(Long id) {
         Car car = carRepository.findById(id).orElseThrow(
                 () -> new ResourceNotFoundException(CAR, "id", id)
         );
         try {
-            return convertToDto(car);
+            return convertToDtoResponse(car);
         } catch (JsonProcessingException e) {
             throw new ResourceConversionException(CAR, CAR_DTO);
         }
     }
 
     @Override
-    public CarDto saveCar(@Valid CarDto carDto) {
-        validateRequest(carDto);
-        CarMake carMake = carMakeRepository.findByName(carDto.getMake()).orElseThrow(
-                () -> new ResourceNotFoundException("Car Make", "make", carDto.getMake())
+    public CarDtoResponse saveCar(@Valid CarDtoRequest carDtoRequest) {
+        validateRequest(carDtoRequest);
+        CarMake carMake = carMakeRepository.findByName(carDtoRequest.getMake()).orElseThrow(
+                () -> new ResourceNotFoundException("Car Make", "make", carDtoRequest.getMake())
         );
         try {
-            Car car = convertToCar(carDto, carMake);
+            Car car = convertToCar(carDtoRequest, carMake);
+            car.setCreatedAt(ZonedDateTime.now().toEpochSecond());
+            car.setStatus(CarStatus.ACTIVE.getValue());
             Car saved = carRepository.save(car);
-            return convertToDto(saved);
+            return convertToDtoResponse(saved);
         } catch (JsonProcessingException e) {
             throw new ResourceConversionException(CAR_DTO, CAR);
         }
     }
 
     @Override
-    public CarDto updateCar(Long id, CarDto carDto) {
-        validateRequest(carDto);
+    public CarDtoResponse updateCar(Long id, CarDtoRequest carDtoRequest) {
+        validateRequest(carDtoRequest);
         Car carById = carRepository.findById(id).orElseThrow(
                 () -> new ResourceNotFoundException(CAR, "id", id)
         );
-        CarMake carMake = carMakeRepository.findByName(carDto.getMake()).orElseThrow(
-                () -> new ResourceNotFoundException("Car Make", "make", carDto.getMake())
+        CarMake carMake = carMakeRepository.findByName(carDtoRequest.getMake()).orElseThrow(
+                () -> new ResourceNotFoundException("Car Make", "make", carDtoRequest.getMake())
         );
         try {
-            Car convertedToCar = convertToCar(carDto, carMake);
+            Car convertedToCar = convertToCar(carDtoRequest, carMake);
             Car updateCar = updateCarDetails(carById, convertedToCar);
+            updateCar.setUpdatedAt(ZonedDateTime.now().toEpochSecond());
             Car save = carRepository.save(updateCar);
-            return convertToDto(save);
+            return convertToDtoResponse(save);
         }catch (JsonProcessingException e){
             throw new ResourceConversionException(CAR_DTO, CAR);
         }
@@ -118,56 +121,61 @@ public class CarServiceImpl implements CarService {
         return existingCar;
     }
 
-    private CarDto convertToDto(Car car) throws JsonProcessingException {
-        return CarDto.builder()
+    private CarDtoResponse convertToDtoResponse(Car car) throws JsonProcessingException {
+        Instant createdAt = Instant.ofEpochSecond(car.getCreatedAt());
+        Instant updatedAt = car.getUpdatedAt() != null ? Instant.ofEpochSecond(car.getUpdatedAt()) : null;
+        return CarDtoResponse.builder()
                 .id(car.getId())
                 .make(car.getCarMake().getName())
                 .model(car.getModel())
                 .year(car.getYear())
                 .price(car.getPrice())
                 .isElectric(car.isElectric())
+                .status(CarStatus.fromValue(car.getStatus()))
                 .features(Arrays.asList(objectMapper.readValue(car.getFeatures(), String[].class)))
                 .engine(objectMapper.readValue(car.getEngine(), Engine.class))
                 .previousOwner(car.getPreviousOwner())
                 .warranty(objectMapper.readValue(car.getWarranty(), Warranty.class))
                 .maintenanceDates(Arrays.asList(objectMapper.readValue(car.getMaintenanceDates(), LocalDate[].class)))
                 .dimensions(objectMapper.readValue(car.getDimensions(), Dimensions.class))
+                .createdAt(createdAt.atZone(ZoneId.of("UTC")))
+                .updatedAt(updatedAt != null ? updatedAt.atZone(ZoneId.of("UTC")) : null)
                 .build();
     }
 
-    private Car convertToCar(CarDto carDto, CarMake carMake) throws JsonProcessingException {
-        String engine = objectMapper.writeValueAsString(carDto.getEngine());
-        String warranty = objectMapper.writeValueAsString(carDto.getWarranty());
-        String dimensions = objectMapper.writeValueAsString(carDto.getDimensions());
-        String features = objectMapper.writeValueAsString(carDto.getFeatures());
-        String maintenanceDates = objectMapper.writeValueAsString(carDto.getMaintenanceDates());
+    private Car convertToCar(CarDtoRequest carDtoRequest, CarMake carMake) throws JsonProcessingException {
+        String engine = objectMapper.writeValueAsString(carDtoRequest.getEngine());
+        String warranty = objectMapper.writeValueAsString(carDtoRequest.getWarranty());
+        String dimensions = objectMapper.writeValueAsString(carDtoRequest.getDimensions());
+        String features = objectMapper.writeValueAsString(carDtoRequest.getFeatures());
+        String maintenanceDates = objectMapper.writeValueAsString(carDtoRequest.getMaintenanceDates());
         return Car.builder()
-                .id(carDto.getId())
+                .id(carDtoRequest.getId())
                 .carMake(carMake)
-                .model(carDto.getModel())
-                .year(carDto.getYear())
-                .price(carDto.getPrice())
-                .isElectric(carDto.isElectric())
+                .model(carDtoRequest.getModel())
+                .year(carDtoRequest.getYear())
+                .price(carDtoRequest.getPrice())
+                .isElectric(carDtoRequest.isElectric())
                 .features(features)
                 .engine(engine)
-                .previousOwner(carDto.getPreviousOwner())
+                .previousOwner(carDtoRequest.getPreviousOwner())
                 .warranty(warranty)
                 .maintenanceDates(maintenanceDates)
                 .dimensions(dimensions)
                 .build();
     }
 
-    private void validateRequest(CarDto carDto){
-        validateMake(carDto.getMake());
-        validateModel(carDto.getModel());
-        validateYear(carDto.getYear());
-        validatePrice(carDto.getPrice());
-        validateFeatures(carDto.getFeatures());
-        validateEngine(carDto.getEngine());
-        validatePreviousOwner(carDto.getPreviousOwner());
-        validateWarranty(carDto.getWarranty());
-        validateMaintenanceDates(carDto.getMaintenanceDates());
-        validateDimensions(carDto.getDimensions());
+    private void validateRequest(CarDtoRequest carDtoRequest){
+        validateMake(carDtoRequest.getMake());
+        validateModel(carDtoRequest.getModel());
+        validateYear(carDtoRequest.getYear());
+        validatePrice(carDtoRequest.getPrice());
+        validateFeatures(carDtoRequest.getFeatures());
+        validateEngine(carDtoRequest.getEngine());
+        validatePreviousOwner(carDtoRequest.getPreviousOwner());
+        validateWarranty(carDtoRequest.getWarranty());
+        validateMaintenanceDates(carDtoRequest.getMaintenanceDates());
+        validateDimensions(carDtoRequest.getDimensions());
     }
 
     private void validateMaintenanceDates(List<LocalDate> maintenanceDates) {

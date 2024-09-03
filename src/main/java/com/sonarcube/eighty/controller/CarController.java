@@ -1,6 +1,7 @@
 package com.sonarcube.eighty.controller;
 
-import com.sonarcube.eighty.dto.CarDto;
+import com.sonarcube.eighty.dto.CarDtoRequest;
+import com.sonarcube.eighty.dto.CarDtoResponse;
 import com.sonarcube.eighty.service.CarService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,8 +24,8 @@ public class CarController {
     }
 
     @GetMapping
-    public ResponseEntity<List<CarDto>> getAllCars() {
-        List<CarDto> allCars = carService.getAllCars();
+    public ResponseEntity<List<CarDtoResponse>> getAllCars() {
+        List<CarDtoResponse> allCars = carService.getAllCars();
         return ResponseEntity.ok(allCars);
     }
 
@@ -32,8 +33,8 @@ public class CarController {
             path = "/{id}",
             produces = MediaType.APPLICATION_JSON_VALUE
     )
-    public ResponseEntity<CarDto> getCarById(@PathVariable("id") Long id){
-        CarDto carById = carService.getCarById(id);
+    public ResponseEntity<CarDtoResponse> getCarById(@PathVariable("id") Long id){
+        CarDtoResponse carById = carService.getCarById(id);
         return ResponseEntity.ok(carById);
     }
 
@@ -41,8 +42,8 @@ public class CarController {
             consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE
     )
-    public ResponseEntity<CarDto> saveCar(@Valid @RequestBody CarDto carDto){
-        CarDto savedCar = carService.saveCar(carDto);
+    public ResponseEntity<CarDtoResponse> saveCar(@Valid @RequestBody CarDtoRequest carDtoRequest){
+        CarDtoResponse savedCar = carService.saveCar(carDtoRequest);
         return new ResponseEntity<>(savedCar, HttpStatus.CREATED);
     }
 
@@ -51,8 +52,8 @@ public class CarController {
             produces = MediaType.APPLICATION_JSON_VALUE,
             path = "/{id}"
     )
-    public ResponseEntity<CarDto> updateCar(@PathVariable("id") Long id, @Valid @RequestBody CarDto carDto){
-        CarDto updateCar = carService.updateCar(id, carDto);
+    public ResponseEntity<CarDtoResponse> updateCar(@PathVariable("id") Long id, @Valid @RequestBody CarDtoRequest carDtoRequest){
+        CarDtoResponse updateCar = carService.updateCar(id, carDtoRequest);
         return new ResponseEntity<>(updateCar, HttpStatus.OK);
     }
 
