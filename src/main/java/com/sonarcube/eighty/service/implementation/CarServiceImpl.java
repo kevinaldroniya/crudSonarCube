@@ -13,6 +13,10 @@ import com.sonarcube.eighty.repository.CarRepository;
 import com.sonarcube.eighty.service.CarService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -119,6 +123,48 @@ public class CarServiceImpl implements CarService {
         } else {
             throw new ResourceNotFoundException(CAR, "id", id);
         }
+    }
+
+    @Override
+    public Page<CarDtoResponse> findBySomeFields(String make, String model, int year, boolean isElectric, int page, int size, String sortBy, String sortDirection) {
+        Sort sort = sortDirection.equalsIgnoreCase(Sort.Direction.ASC.name()) ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
+        Pageable pageable = PageRequest.of(page, size, sort);
+        Page<Car> bySomeOfFields = carRepository.findBySomeOfFields(make, model, year, isElectric, pageable);
+        return bySomeOfFields.map(car -> {
+            try {
+                return convertToDtoResponse(car);
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    @Override
+    public Page<CarDtoResponse> findCarByCustomQuery(String make, String model, int year, boolean isElectric, int page, int size, String sortBy, String sortDirection) {
+        Sort sort = sortDirection.equalsIgnoreCase(Sort.Direction.ASC.name()) ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
+        Pageable pageable = PageRequest.of(page, size, sort);
+        Page<Car> bySomeOfFields = carRepository.findCarByCustomQuery(make, model, year, isElectric, pageable);
+        return bySomeOfFields.map(car -> {
+            try {
+                return convertToDtoResponse(car);
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    @Override
+    public Page<CarDtoResponse> findCarByCustomQueryV2(String make, String model, int year, boolean isElectric, int page, int size, String sortBy, String sortDirection) {
+        Sort sort = sortDirection.equalsIgnoreCase(Sort.Direction.ASC.name()) ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
+        Pageable pageable = PageRequest.of(page, size, sort);
+        Page<Car> bySomeOfFields = carRepository.findCarWithCustomQueryV2(make, model, year, isElectric, pageable);
+        return bySomeOfFields.map(car -> {
+            try {
+                return convertToDtoResponse(car);
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
+            }
+        });
     }
 
     private Car updateCarDetails(Car existingCar, Car car) {
