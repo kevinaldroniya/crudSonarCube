@@ -1,0 +1,10 @@
+INSERT INTO `car_make` (`name`, `is_active`) VALUES ('Toyota', 1);
+INSERT INTO `car_make` (`name`, `is_active`) VALUES ('Honda', 1);
+INSERT INTO `car_make` (`name`, `is_active`) VALUES ('Ford', 1);
+INSERT INTO `car_make` (`name`, `is_active`) VALUES ('Chevrolet', 1);
+INSERT INTO `car_make` (`name`, `is_active`) VALUES ('Nissan', 1);
+INSERT INTO `car_make` (`name`, `is_active`) VALUES ('BMW', 1);
+INSERT INTO `car_make` (`name`, `is_active`) VALUES ('Mercedes-Benz', 1);
+INSERT INTO `car_make` (`name`, `is_active`) VALUES ('Volkswagen', 1);
+INSERT INTO `car_make` (`name`, `is_active`) VALUES ('Audi', 1);
+INSERT INTO `car_make` (`name`, `is_active`) VALUES ('Hyundai', 1);

@@ -2,21 +2,14 @@ version: '3.8'
 services:
   mysql:
     image: mysql:8.0
-    container_name: mysql_crudSonar
+    container_name: ${container_name}
     ports:
       - "3306:3306"
     environment:
-      MYSQL_DATABASE: crudSonar
-      MYSQL_ROOT_PASSWORD: hgrDWRdzNh4LbWd61XvZJ86PcEt9mJ3jHNsmqW8LkHA=
+      MYSQL_DATABASE: ${database_name}
+      MYSQL_ROOT_PASSWORD: ${database_password}
     volumes:
-      - mysql_crudSonar:/var/lib/mysql
-
-  flyway:
-    image: flyway/flyway:latest
-    container_name: flyway-migrate
-    command: -url=jdbc:mysql://mysql:3306/crudSonar?allowPublicKeyRetrieval=true -user=root -password=hgrDWRdzNh4LbWd61XvZJ86PcEt9mJ3jHNsmqW8LkHA= -locations=filesystem:/flyway/sql migrate
-    volumes:
-      - ./src/main/resources/db/migration:/flyway/sql
+      - mysql_cars:/var/lib/mysql
 
 volumes:
-  mysql_crudSonar:
+  ${volume_name}:
