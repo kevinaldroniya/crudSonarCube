@@ -69,10 +69,10 @@ public class CarController {
     }
 
     @GetMapping(
-            path = "/findByCustomQueryV2",
+            path = "/filter",
             produces = MediaType.APPLICATION_JSON_VALUE
     )
-    public ResponseEntity<Page<CarDtoResponse>> findByCustomQueryV2(@ModelAttribute CarFilterParams carFilterParams){
+    public ResponseEntity<Page<CarDtoResponse>> filter(@ModelAttribute CarFilterParams carFilterParams){
         Page<CarDtoResponse> responses = carService.findCarByCustomQueryV2(carFilterParams);
         return new ResponseEntity<>(responses, HttpStatus.OK);
     }

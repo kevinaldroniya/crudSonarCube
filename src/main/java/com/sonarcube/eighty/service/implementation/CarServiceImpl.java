@@ -11,6 +11,7 @@ import com.sonarcube.eighty.model.CarMake;
 import com.sonarcube.eighty.repository.CarMakeRepository;
 import com.sonarcube.eighty.repository.CarRepository;
 import com.sonarcube.eighty.service.CarService;
+import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -127,12 +128,12 @@ public class CarServiceImpl implements CarService {
 
 
     @Override
+    @Transactional
     public Page<CarDtoResponse> findCarByCustomQueryV2(CarFilterParams carFilterParams) {
         CarMake carMake = carMakeRepository.findByName(carFilterParams.getMake()).orElse(null);
-        Long id = carMake != null ? carMake.getId() : 0;
         Sort sort = carFilterParams.getSortDirection().equalsIgnoreCase(Sort.Direction.ASC.name()) ? Sort.by(carFilterParams.getSortBy()).ascending() : Sort.by(carFilterParams.getSortBy()).descending();
         Pageable pageable = PageRequest.of(carFilterParams.getPage(), carFilterParams.getSize(), sort);
-        Page<Car> bySomeOfFields = carRepository.findCarWithCustomQueryV2(id, carFilterParams.getModel(), carFilterParams.getYear(), pageable);
+        Page<Car> bySomeOfFields = carRepository.findCarWithCustomQueryV2(carMake, carFilterParams, pageable);
         return bySomeOfFields.map(car -> {
             try {
                 return convertToDtoResponse(car);
