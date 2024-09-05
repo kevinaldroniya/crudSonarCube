@@ -45,8 +45,7 @@ class CarControllerTest {
 
     @BeforeEach
     void setUp() throws JsonProcessingException {
-        carRepository.deleteAll();
-        carMakeRepository.deleteAll();
+//        carRepository.deleteAll();
         CarMake carMake = initCarMake();
         carMakeRepository.save(carMake);
         Car car = intitalizeCar();
@@ -56,6 +55,7 @@ class CarControllerTest {
     @Test
     void testGetAllCars_shouldReturnAllCars() throws Exception {
         //Arrange
+        initCarData();
         //Act
         mockMvc.perform(get("/car")
                         .accept(MediaType.APPLICATION_JSON)
@@ -1441,8 +1441,22 @@ class CarControllerTest {
                 .dimensions(convertDimensionsToJson())
                 .createdAt(ZonedDateTime.now().toEpochSecond())
                 .updatedAt(ZonedDateTime.now().toEpochSecond())
-                .status(CarStatus.ARCHIVE.getValue())
+                .status(CarStatus.ACTIVE.getValue())
                 .build();
+    }
+
+    private void initCarData() throws JsonProcessingException {
+        int count = 0;
+        List<CarMake> carMakes = carMakeRepository.findAll();
+        for (int i = 0; i < 10; i++) {
+            Car car = intitalizeCar();
+            car.setCarMake(carMakes.get(count));
+            carRepository.save(car);
+            count++;
+            if (count == carMakes.size()-1){
+                count = 0;
+            }
+        }
     }
 
     private Car badInitializeCar(){

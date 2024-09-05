@@ -2,6 +2,7 @@ package com.sonarcube.eighty.controller;
 
 import com.sonarcube.eighty.dto.CarDtoRequest;
 import com.sonarcube.eighty.dto.CarDtoResponse;
+import com.sonarcube.eighty.dto.CarFilterParams;
 import com.sonarcube.eighty.service.CarService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -68,59 +69,11 @@ public class CarController {
     }
 
     @GetMapping(
-            path = "/findBySomeFields",
-            consumes = MediaType.APPLICATION_JSON_VALUE,
-            produces = MediaType.APPLICATION_JSON_VALUE
-    )
-    public ResponseEntity<Page<CarDtoResponse>> findBySomeFields(
-            @RequestParam(defaultValue = "") String make,
-            @RequestParam(defaultValue = "") String model,
-            @RequestParam(defaultValue = "0") int year,
-            @RequestParam(defaultValue = "1") boolean isElectric,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "id") String sortBy,
-            @RequestParam(defaultValue = "asc") String sortDirection
-    ){
-        Page<CarDtoResponse> responses = carService.findBySomeFields(make, model, year, isElectric, page, size, sortBy, sortDirection);
-        return new ResponseEntity<>(responses, HttpStatus.OK);
-    }
-
-    @GetMapping(
-            path = "/findByCustomQuery",
-            consumes = MediaType.APPLICATION_JSON_VALUE,
-            produces = MediaType.APPLICATION_JSON_VALUE
-    )
-    public ResponseEntity<Page<CarDtoResponse>> findByCustomQuery(
-            @RequestParam(defaultValue = "") String make,
-            @RequestParam(defaultValue = "") String model,
-            @RequestParam(defaultValue = "0") int year,
-            @RequestParam(defaultValue = "1") boolean isElectric,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "id") String sortBy,
-            @RequestParam(defaultValue = "asc") String sortDirection
-    ){
-        Page<CarDtoResponse> responses = carService.findCarByCustomQuery(make, model, year, isElectric, page, size, sortBy, sortDirection);
-        return new ResponseEntity<>(responses, HttpStatus.OK);
-    }
-
-    @GetMapping(
             path = "/findByCustomQueryV2",
-            consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE
     )
-    public ResponseEntity<Page<CarDtoResponse>> findByCustomQueryV2(
-            @RequestParam(defaultValue = "") String make,
-            @RequestParam(defaultValue = "") String model,
-            @RequestParam(defaultValue = "0") int year,
-            @RequestParam(defaultValue = "1") boolean isElectric,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "id") String sortBy,
-            @RequestParam(defaultValue = "asc") String sortDirection
-    ){
-        Page<CarDtoResponse> responses = carService.findCarByCustomQueryV2(make, model, year, isElectric, page, size, sortBy, sortDirection);
+    public ResponseEntity<Page<CarDtoResponse>> findByCustomQueryV2(@ModelAttribute CarFilterParams carFilterParams){
+        Page<CarDtoResponse> responses = carService.findCarByCustomQueryV2(carFilterParams);
         return new ResponseEntity<>(responses, HttpStatus.OK);
     }
 }

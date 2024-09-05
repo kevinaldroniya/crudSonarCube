@@ -6,10 +6,9 @@ import org.springframework.data.domain.Pageable;
 
 public interface CarCustomRepository {
     Page<Car> findCarWithCustomQueryV2(
-            String make,
+            Long makeId,
             String model,
             Integer year,
-            Boolean isElectric,
             Pageable pageable
     );
 }

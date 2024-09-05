@@ -1,0 +1,3 @@
+INSERT INTO cars.car
+(is_electric, previous_owner, price, `year`, id, dimensions, engine_specs, features, maintenance_dates, make_id, model, warranty, created_at, updated_at, status)
+VALUES(1, 1, 10000.0, 2021, 3402, '{"length":100,"width":50,"height":30,"weight":0}', '{"type":"EngineType","horsepower":200,"torque":300}', '["Feature1","Feature2","Feature3"]', '["2024-09-05","2024-09-06","2024-09-07"]', 2, 'Model', '{"basic":"Basic","powertrain":"Powertrain"}', 1725508440, 1725508440, 'archive');
