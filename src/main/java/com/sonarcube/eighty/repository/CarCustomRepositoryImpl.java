@@ -43,7 +43,7 @@ public class CarCustomRepositoryImpl implements CarCustomRepository{
     private StringBuilder createQuery(CarMake carMake, CarFilterParams carFilterParams) {
         StringBuilder sql = new StringBuilder("SELECT c FROM Car c WHERE 1=1");
         if (Objects.nonNull(carMake)) {
-            sql.append(" AND c.carMake = :make_id");
+            sql.append(" AND c.carMake = :carMake");
         }
         if (!carFilterParams.getModel().isEmpty() && !carFilterParams.getModel().isBlank()) {
             sql.append(" AND c.model LIKE :model");
@@ -62,7 +62,7 @@ public class CarCustomRepositoryImpl implements CarCustomRepository{
 
     private void setQueryParam(CarMake carMake, CarFilterParams carFilterParams, TypedQuery<?> query) {
         if (Objects.nonNull(carMake)) {
-            query.setParameter("make_id", carMake);
+            query.setParameter("carMake", carMake);
         }
         if (!carFilterParams.getModel().isEmpty() && !carFilterParams.getModel().isBlank()) {
             query.setParameter("model", "%" + carFilterParams.getModel() + "%");

@@ -14,11 +14,10 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -37,11 +36,11 @@ class CarMakeControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    List<CarMake> carMakes;
+
     @BeforeEach
-    void setUp(){
-        carMakeRepository.deleteAll();
-        CarMake carMake = initializeCarModel();
-        carMakeRepository.save(carMake);
+    void setUp() {
+        carMakes = carMakeRepository.findAll();
     }
 
     @Test
@@ -54,14 +53,16 @@ class CarMakeControllerTest {
                 .andDo(result -> {
                     List<CarMakeResponse> responses = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {});
                     assertNotNull(responses);
-                    assertEquals("Panamera", responses.get(0).getName());
+                    assertEquals(carMakes.size(), responses.size());
                 });
     }
 
     @Test
     void testGetCarModelById_shouldReturnCarModelBasedOnId() throws Exception{
         //Arrange
-        Long id = carMakeRepository.findAll().get(0).getId();
+        int getRandomId = new Random().nextInt(carMakes.size()-1);
+        String carMakeName = carMakes.get(getRandomId).getName();
+        Long id = carMakes.get(getRandomId).getId();
         mockMvc.perform(get("/makes/"+id)
                 .accept(MediaType.APPLICATION_JSON)
                 .contentType(MediaType.APPLICATION_JSON))
@@ -71,7 +72,7 @@ class CarMakeControllerTest {
                     CarMakeResponse response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {});
                     //Assert
                     assertNotNull(response);
-                    assertEquals("Panamera", response.getName());
+                    assertEquals(carMakeName, response.getName());
                 });
     }
 
@@ -91,13 +92,16 @@ class CarMakeControllerTest {
                     CarMakeResponse response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {});
                     assertNotNull(response);
                     assertEquals(request.get("name"), response.getName());
+                    carMakeRepository.deleteById(response.getId());
                 });
     }
 
     @Test
     void testSaveCarMake_shouldThrowAlreadyExists() throws Exception{
         Map<String, Object> request = carModelRequest();
-        request.put("name","Panamera");
+        int id = new Random().nextInt(carMakes.size()-1);
+        String carMakeName = carMakes.get(id).getName();
+        request.put("name",carMakeName);
         mockMvc.perform(post("/makes")
                 .accept(MediaType.APPLICATION_JSON)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -106,18 +110,21 @@ class CarMakeControllerTest {
                 .andDo(result -> {
                     ErrorDetails response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {});
                     assertNotNull(response);
-                    assertEquals("Car Make already exists with name : 'Panamera'", response.getDetails());
+                    assertEquals("Car Make already exists with name : '" + carMakeName + "'", response.getDetails());
                 });
     }
 
     @Test
     void testUpdateCarModel_shouldUpdateAndReturnCarModelResponse() throws Exception{
         //Arrange
-        Long id = carMakeRepository.findAll().get(0).getId();
+        int getRandomId = new Random().nextInt(carMakes.size()-1);
         Map<String, Object> request = carModelRequest();
-        request.put("name", "CX3");
+        request.put("name", "Updated Car Make");
+        CarMake carMake = carMakes.get(getRandomId);
+        String name = carMakes.get(getRandomId).getName();
+
         //Act
-        mockMvc.perform(put("/makes/"+id)
+        mockMvc.perform(put("/makes/"+carMake.getId())
                 .accept(MediaType.APPLICATION_JSON)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
@@ -127,16 +134,17 @@ class CarMakeControllerTest {
                    CarMakeResponse response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {});
                     assertNotNull(response);
                     assertEquals(request.get("name"), response.getName());
+                    carMake.setName(name);
+                    carMakeRepository.save(carMake);
                 });
     }
 
     @Test
     void testUpdateCar_shouldThrowAlreadyExists() throws Exception{
-        CarMake carMake = initializeCarModel();
-        carMake.setName("Already");
-        carMakeRepository.save(carMake);
+        int getRandomId = new Random().nextInt(carMakes.size()-1);
+        String carMakeName = carMakes.get(getRandomId).getName();
         Map<String, Object> request = carModelRequest();
-        request.put("name","Already");
+        request.put("name", carMakeName);
         Long id = carMakeRepository.findAll().get(0).getId();
         mockMvc.perform(put("/makes/"+id)
                         .accept(MediaType.APPLICATION_JSON)
@@ -147,14 +155,15 @@ class CarMakeControllerTest {
                 .andDo(result -> {
                     ErrorDetails response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {});
                     assertNotNull(response);
-                    assertEquals("Car Make already exists with name : 'Already'", response.getDetails());
+                    assertEquals("Car Make already exists with name : '" + carMakeName + "'", response.getDetails());
                 });
     }
 
     @Test
     void testDeleteCarModel_shouldDisableCarModel() throws Exception{
         //Arrange
-        Long id = carMakeRepository.findAll().get(0).getId();
+        int getRandomId = new Random().nextInt(carMakes.size()-1);
+        Long id = carMakeRepository.findAll().get(getRandomId).getId();
         //Act
         mockMvc.perform(delete("/makes/"+id)
                 .accept(MediaType.APPLICATION_JSON)
@@ -181,20 +190,9 @@ class CarMakeControllerTest {
                 });
     }
 
-    private CarMake initializeCarModel() {
-        return CarMake.builder()
-//                .id(1L)
-                .name("Panamera")
-                .isActive(true)
-                .createdAt(ZonedDateTime.now(ZoneId.of("UTC")).toEpochSecond())
-                .updatedAt(null)
-                .deletedAt(null)
-                .build();
-    }
-
     private Map<String, Object> carModelRequest(){
         Map<String, Object> request = new HashMap<>();
-        request.put("name","Panamera");
+        request.put("name","MerryGo");
         return request;
     }
 

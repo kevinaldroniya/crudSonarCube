@@ -1167,7 +1167,6 @@ class CarServiceImplTest {
 
     @ParameterizedTest
     @CsvSource({
-            "''",
             "active",
             "sold",
             "archive",

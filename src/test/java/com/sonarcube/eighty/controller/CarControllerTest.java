@@ -45,11 +45,8 @@ class CarControllerTest {
 
     @BeforeEach
     void setUp() throws JsonProcessingException {
-//        carRepository.deleteAll();
-        CarMake carMake = initCarMake();
-        carMakeRepository.save(carMake);
-        Car car = intitalizeCar();
-        carRepository.save(car);
+        carRepository.deleteAll();
+        initCarData();
     }
 
     @Test
@@ -92,7 +89,7 @@ class CarControllerTest {
     @Test
     void testGetAllCars_shouldReturnInternalServerError() throws Exception {
         //Arrange
-        carRepository.save(badInitializeCar());
+        Car save = carRepository.save(badInitializeCar());
         //Act
         mockMvc.perform(get("/car")
                         .accept(MediaType.APPLICATION_JSON)
@@ -102,6 +99,7 @@ class CarControllerTest {
                     ErrorDetails response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {
                     });
                    assertEquals("Resource conversion error", response.getMessage());
+                   carRepository.deleteById(save.getId());
                 });
     }
 
@@ -165,7 +163,7 @@ class CarControllerTest {
     void testGetCarById_shouldThrowInternalServerError() throws Exception {
         //Arrange
         carRepository.deleteAll();
-        carRepository.save(badInitializeCar());
+        Car save = carRepository.save(badInitializeCar());
         List<Car> carRepositoryAll = carRepository.findAll();
         Long id = carRepositoryAll.get(0).getId();
         //Act
@@ -178,6 +176,7 @@ class CarControllerTest {
                     ErrorDetails response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {});
                     assertNotNull(response.getError());
                     assertEquals("Resource conversion error", response.getMessage());
+                    carRepository.deleteById(save.getId());
                 });
     }
 
@@ -856,7 +855,10 @@ class CarControllerTest {
     void testUpdateCar_shouldUpdateCar_returnUpdatedCarDto() throws Exception{
         //Arrange
         Map<String, Object> request = carRequest();
-            request.put("make","Test");
+        //get random number from 0 to 9
+        int random = new Random().nextInt(10);
+        String name = carMakeRepository.findAll().get(random).getName();
+        request.put("make",name);
         Long id = carRepository.findAll().get(0).getId();
         //Act
         mockMvc.perform(put("/car/"+id)
@@ -870,7 +872,7 @@ class CarControllerTest {
                     });
                     assertNotNull(carDtoRequest.getId());
                     assertEquals(id, carDtoRequest.getId());
-                    assertEquals("Test", carDtoRequest.getMake());
+                    assertEquals(name, carDtoRequest.getMake());
                 });
 
     }
@@ -1425,7 +1427,8 @@ class CarControllerTest {
     }
 
     private Car intitalizeCar() throws JsonProcessingException {
-        CarMake carMake = carMakeRepository.findAll().get(0);
+        int carMakeId = new Random().nextInt(10);
+        CarMake carMake = carMakeRepository.findAll().get(carMakeId);
         return Car.builder()
                 //.id(1L)
                 .carMake(carMake)
@@ -1460,7 +1463,9 @@ class CarControllerTest {
     }
 
     private Car badInitializeCar(){
-        CarMake carMake = carMakeRepository.findAll().get(0);
+        List<CarMake> carMakes = carMakeRepository.findAll();
+        int carMakeId = new Random().nextInt(carMakes.size()-1);
+        CarMake carMake = carMakes.get(carMakeId);
         return Car.builder()
                 .id(1L)
                 .carMake(carMake)
@@ -1481,9 +1486,12 @@ class CarControllerTest {
     }
 
     private CarDtoRequest getOneCarDto(){
+        List<CarMake> carMakes = carMakeRepository.findAll();
+        int carMakeId = new Random().nextInt(carMakes.size()-1);
+        String name = carMakes.get(carMakeId).getName();
         return CarDtoRequest.builder()
                 //.id(1L)
-                .make("Test")
+                .make(name)
                 .model("Model")
                 .year(2021)
                 .price(10000)
