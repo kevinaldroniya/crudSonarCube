@@ -5,7 +5,6 @@ import com.sonarcube.eighty.dto.CarDtoResponse;
 import com.sonarcube.eighty.dto.CarFilterParams;
 import com.sonarcube.eighty.dto.CarStatusRequest;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
