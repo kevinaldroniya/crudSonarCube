@@ -20,10 +20,12 @@ import java.util.Objects;
 public class CarCustomRepositoryImpl implements CarCustomRepository{
 
     private final EntityManager entity;
+    private final CarMakeRepository carMakeRepository;
 
     @Override
     @Transactional
-    public Page<Car> findCarWithCustomQueryV2(CarMake carMake, CarFilterParams carFilterParams, Pageable pageable) {
+    public Page<Car> findCarWithCustomQueryV2(CarFilterParams carFilterParams, Pageable pageable) {
+        CarMake carMake = carMakeRepository.findByName(carFilterParams.getMake()).orElse(null);
         StringBuilder sql = createQuery(carMake, carFilterParams);
         TypedQuery<Car> query = entity.createQuery(sql.toString(), Car.class);
         setQueryParam(carMake, carFilterParams, query);

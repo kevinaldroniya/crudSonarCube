@@ -14,9 +14,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.data.domain.*;
 
 import java.io.IOException;
 import java.time.LocalDate;
@@ -1191,10 +1193,101 @@ class CarServiceImplTest {
         assertEquals(value, response.getStatus().getValue());
     }
 
+    @ParameterizedTest
+    @CsvSource({
+            "active",
+            "sold",
+            "archive",
+            "deleted"
+    })
+    void testUpdateStatusCar_shouldThrowNotFoundException(String value){
+        //Arrange
+        CarStatusRequest carStatusRequest = getCarStatusRequest();
+        carStatusRequest.setCarStatus(CarStatus.fromValue(value));
+        String expectedMessage = "Car not found with id : '1'";
+        when(carRepository.findById(1L)).thenReturn(Optional.empty());
+        //Act
+        ResourceNotFoundException response = assertThrows(ResourceNotFoundException.class, () -> carServiceImpl.updateCarStatus(1L, carStatusRequest));
+        //Assert
+        assertNotNull(response);
+        assertEquals(expectedMessage, response.getMessage());
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "active",
+            "sold",
+            "archive",
+            "deleted"
+    })
+    void testUpdateStatusCar_shouldThrowConversionException(String value) throws Exception{
+        CarStatusRequest request = getCarStatusRequest();
+        request.setCarStatus(CarStatus.fromValue(value));
+        Car oneCar = getOneCar();
+        Car savedCar = getOneCar();
+        savedCar.setUpdatedAt(ZonedDateTime.now().toEpochSecond());
+        savedCar.setStatus(CarStatus.fromValue(value).toString());
+        String expectedMessage = "Error while serializing Car to CarDto";
+        when(carRepository.findById(1L)).thenReturn(Optional.of(oneCar));
+        when(carRepository.save(any(Car.class))).thenReturn(savedCar);
+        doThrow(JsonProcessingException.class).when(objectMapper).readValue(anyString(), ArgumentMatchers.<Class<?>>any());
+        ResourceConversionException response = assertThrows(ResourceConversionException.class, () -> carServiceImpl.updateCarStatus(1L, request));
+        assertNotNull(response);
+        assertEquals(expectedMessage, response.getMessage());
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "asc",
+            "desc"
+    })
+    void testPagination_shouldReturnAllTheCarWithFiltering(String sortingDirection) throws Exception{
+        //Arrange
+        CarMake carMake = getCarMake();
+        CarFilterParams carFilterParams = getCarFilterParams();
+        List<Car> allCars = getAllCars();
+        Page<Car> pageOfCars = getPageOfCars();
+        carFilterParams.setSortDirection(sortingDirection.equalsIgnoreCase("asc") ? "asc" : "desc");
+        when(carMakeRepository.findByName(anyString())).thenReturn(Optional.of(carMake));
+        when(carRepository.findCarWithCustomQueryV2(any(CarFilterParams.class), any(Pageable.class))).thenReturn(pageOfCars);
+        when(objectMapper.readValue(getFeatures(), String[].class)).thenReturn(getCarDtoFeatures());
+        when(objectMapper.readValue(getEngine(), Engine.class)).thenReturn(getCarDtoEngine());
+        when(objectMapper.readValue(getWarranty(), Warranty.class)).thenReturn(getCarDtoWarranty());
+        when(objectMapper.readValue(getMaintenanceDates(), LocalDate[].class)).thenReturn(getCarDtoMaintenanceDates());
+        when(objectMapper.readValue(getDimensions(), Dimensions.class)).thenReturn(getCarDtoDimensions());
+        //Act
+        Page<CarDtoResponse> response = carServiceImpl.findCarByCustomQueryV2(carFilterParams);
+        //Assert
+        assertNotNull(response);
+        assertEquals(allCars.size(), response.getTotalElements());
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "asc",
+            "desc"
+    })
+    void testPagination_shouldThrowConversionException(String sortingDirection) throws Exception{
+        //Arrange
+        CarMake carMake = getCarMake();
+        CarFilterParams carFilterParams = getCarFilterParams();
+        Page<Car> pageOfCars = getPageOfCars();
+        carFilterParams.setSortDirection(sortingDirection.equalsIgnoreCase("asc") ? "asc" : "desc");
+        String expectedMessage = "Error while serializing Car to CarDto";
+        when(carMakeRepository.findByName(anyString())).thenReturn(Optional.of(carMake));
+        when(carRepository.findCarWithCustomQueryV2(any(CarFilterParams.class), any(Pageable.class))).thenReturn(pageOfCars);
+        doThrow(JsonProcessingException.class).when(objectMapper).readValue(anyString(), ArgumentMatchers.<Class<?>>any());
+        //Act
+        ResourceConversionException response = assertThrows(ResourceConversionException.class, () -> carServiceImpl.findCarByCustomQueryV2(carFilterParams));
+        //Assert
+        assertNotNull(response);
+        assertEquals(expectedMessage, response.getMessage());
+    }
+
 
     private List<Car> getAllCars(){
         List<Car> cars = new ArrayList<>();
-        for (int i = 0; i < 9; i++) {
+        for (int i = 0; i < 100; i++) {
             boolean isElectric = i % 2 == 0;
             Car car = Car.builder()
                     .id((long) i)
@@ -1384,5 +1477,22 @@ class CarServiceImplTest {
         return CarStatusRequest.builder()
                 .carStatus(CarStatus.ACTIVE)
                 .build();
+    }
+
+    private CarFilterParams getCarFilterParams() {
+        return CarFilterParams.builder()
+                .make("Make")
+                .model("model")
+                .year(2024)
+                .status(CarStatus.ACTIVE.getValue())
+                .page(0)
+                .size(10)
+                .sortBy("id")
+                .sortDirection("asc")
+                .build();
+    }
+
+    private Page<Car> getPageOfCars(){
+        return new PageImpl<>(getAllCars(), PageRequest.of(0, 5, Sort.by(Sort.Direction.ASC, "id")), getAllCars().size());
     }
 }

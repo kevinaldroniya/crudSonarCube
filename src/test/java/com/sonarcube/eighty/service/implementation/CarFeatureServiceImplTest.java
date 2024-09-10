@@ -99,6 +99,98 @@ class CarFeatureServiceImplTest {
         assertEquals(expectedMessage, response.getMessage());
     }
 
+    @Test
+    void testUpdateCarFeature_shouldReturnCarFeatureResponse(){
+        //Arrange
+        CarFeature carFeature = getCarFeature();
+        String carFeatureRequest = "Updated Bluetooth";
+        CarFeature updatedCarFeature = getCarFeature();
+        updatedCarFeature.setFeature(carFeatureRequest);
+        when(carFeatureRepository.findById(1L)).thenReturn(Optional.of(carFeature));
+        when(carFeatureRepository.findByFeature(carFeatureRequest)).thenReturn(Optional.empty());
+        when(carFeatureRepository.save(any(CarFeature.class))).thenReturn(updatedCarFeature);
+        //Act
+        CarFeatureResponse response = carFeatureService.updateCarFeature(1L, carFeatureRequest);
+        //Assert
+        assertNotNull(response);
+        assertEquals(carFeatureRequest, response.getFeature());
+    }
+
+    @Test
+    void testUpdateCarFeature_shouldReturnCarFeatureResponse_carFeatureByNameFounded(){
+        //Arrange
+        CarFeature carFeature = getCarFeature();
+        String carFeatureRequest = "Updated Bluetooth";
+        CarFeature updatedCarFeature = getCarFeature();
+        updatedCarFeature.setFeature(carFeatureRequest);
+        when(carFeatureRepository.findById(1L)).thenReturn(Optional.of(carFeature));
+        when(carFeatureRepository.findByFeature(carFeatureRequest)).thenReturn(Optional.of(carFeature));
+        when(carFeatureRepository.save(any(CarFeature.class))).thenReturn(updatedCarFeature);
+        //Act
+        CarFeatureResponse response = carFeatureService.updateCarFeature(1L, carFeatureRequest);
+        //Assert
+        assertNotNull(response);
+        assertEquals(carFeatureRequest, response.getFeature());
+    }
+
+    @Test
+    void testUpdateCar_shouldThrowResourceNotFoundException(){
+        //Arrange
+        String carFeatureRequest = "Update Feature";
+        String expectedMessage = "Car Feature not found with id : '1'";
+        when(carFeatureRepository.findById(1L)).thenReturn(Optional.empty());
+        //Act
+        ResourceNotFoundException response = assertThrows(ResourceNotFoundException.class, () -> carFeatureService.updateCarFeature(1L, carFeatureRequest));
+        //Assert
+        assertNotNull(response);
+        assertEquals(expectedMessage, response.getMessage());
+    }
+
+    @Test
+    void testUpdateCar_shouldThrowAlreadyExistsException(){
+        //Arrange
+        String carFeatureRequest = "Update Feature";
+        String expectedMessage = "Car Feature already exists with feature : '" + carFeatureRequest + "'";
+        CarFeature carFeature1 = getCarFeature();
+        CarFeature carFeature2 = getCarFeature();
+        carFeature2.setId(2L);
+        carFeature2.setFeature(carFeatureRequest);
+        when(carFeatureRepository.findById(1L)).thenReturn(Optional.of(carFeature1));
+        when(carFeatureRepository.findByFeature(carFeatureRequest)).thenReturn(Optional.of(carFeature2));
+        //Act
+        ResourceAlreadyExistsException response = assertThrows(ResourceAlreadyExistsException.class, () -> carFeatureService.updateCarFeature(1L, carFeatureRequest));
+        //Assert
+        assertNotNull(response);
+        assertEquals(expectedMessage, response.getMessage());
+    }
+
+    @Test
+    void testDeleteCarFeature_shouldReturnCarFeatureResponseWithIsActiveDisable(){
+        //Arrange
+        CarFeature carFeature = getCarFeature();
+        CarFeature deletedCarFeature = getCarFeature();
+        deletedCarFeature.setDeletedAt(ZonedDateTime.now().toEpochSecond());
+        deletedCarFeature.setActive(false);
+        when(carFeatureRepository.findById(1L)).thenReturn(Optional.of(carFeature));
+        when(carFeatureRepository.save(any(CarFeature.class))).thenReturn(deletedCarFeature);
+        //Act
+        CarFeatureResponse response = carFeatureService.deleteCarFeature(1L);
+        //Assert
+        assertNotNull(response);
+        assertEquals(deletedCarFeature.isActive(), response.isActive());
+    }
+
+    @Test
+    void testDeleteCarFeature_shouldThrowNotFoundException(){
+        //Arrange
+        String expectedMessage = "Car Feature not found with id : '1'";
+        when(carFeatureRepository.findById(1L)).thenReturn(Optional.empty());
+        //Act
+        ResourceNotFoundException response = assertThrows(ResourceNotFoundException.class, () -> carFeatureService.deleteCarFeature(1L));
+        //Assert
+        assertNotNull(response);
+        assertEquals(expectedMessage, response.getMessage());
+    }
 
     private List<CarFeature> getAllCarFeatures() {
         List<CarFeature> carFeatures = new ArrayList<>();
@@ -106,6 +198,10 @@ class CarFeatureServiceImplTest {
             CarFeature carFeature = getCarFeature();
             carFeature.setId((long) i+1);
             carFeature.setFeature(getFeatureData()[i]);
+            if (i%2==0){
+                carFeature.setUpdatedAt(null);
+                carFeature.setDeletedAt(null);
+            }
             carFeatures.add(carFeature);
         }
         return carFeatures;

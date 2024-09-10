@@ -2,7 +2,9 @@ package com.sonarcube.eighty.controller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.sonarcube.eighty.dto.*;
 import com.sonarcube.eighty.model.Car;
 import com.sonarcube.eighty.model.CarMake;
@@ -15,6 +17,9 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -1380,6 +1385,47 @@ class CarControllerTest {
                 });
     }
 
+    @Test
+    void testPaginationAndFilter_shouldReturnPageOfCarResponse() throws Exception{
+        //Arrange
+        CarFilterParams carFilterParams = CarFilterParams.builder()
+                .make("Honda")
+                .model("Model")
+                .year(2021)
+                .status(CarStatus.ACTIVE.getValue())
+                .page(0)
+                .size(10)
+                .sortBy("id")
+                .sortDirection(Sort.Direction.ASC.name())
+                .build();
+        Sort sort = carFilterParams.getSortDirection().equalsIgnoreCase(Sort.Direction.ASC.name()) ? Sort.by(carFilterParams.getSortBy()).ascending() : Sort.by(carFilterParams.getSortBy()).descending();
+        //Act
+        mockMvc.perform(get("/car/filter?make=" + carFilterParams.getMake() +
+                        "&model=" + carFilterParams.getModel() + "&year="+carFilterParams.getYear()+
+                        "&status=" + carFilterParams.getStatus() +
+                        "&page=" + carFilterParams.getPage() +
+                        "&size=" + carFilterParams.getSize() +
+                        "&sortBy=" + carFilterParams.getSortBy() +
+                        "&sortDirection="+carFilterParams.getSortDirection())
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON))
+        //Assert
+                .andExpect(status().isOk())
+                .andDo(result -> {
+                    String jsonResponse = result.getResponse().getContentAsString();
+                    JsonNode jsonNode = objectMapper.readTree(jsonResponse);
+                    long totalElements = jsonNode.get("page").get("totalElements").asLong();
+                    int totalPages = jsonNode.get("page").get("totalPages").asInt();
+                    ArrayNode content = (ArrayNode) jsonNode.get("content");
+
+                    Page<Car> carWithCustomQueryV2 = carRepository.findCarWithCustomQueryV2(carFilterParams, PageRequest.of(carFilterParams.getPage(), carFilterParams.getSize(), sort));
+                    assertNotNull(content);
+                    assertEquals(carWithCustomQueryV2.getTotalElements(), totalElements);
+                    assertEquals(carWithCustomQueryV2.getTotalPages(), totalPages);
+                    assertEquals(carWithCustomQueryV2.getContent().size(), content.size());
+                });
+    }
+
     private String convertFeaturesToJson() throws JsonProcessingException {
         List<String> features = List.of("Feature1", "Feature2", "Feature3");
         return objectMapper.writeValueAsString(features);
@@ -1414,16 +1460,6 @@ class CarControllerTest {
                 .height(30)
                 .build();
         return objectMapper.writeValueAsString(dimensions);
-    }
-
-    private CarMake initCarMake(){
-        return CarMake.builder()
-                .name("Test")
-                .createdAt(ZonedDateTime.now().toEpochSecond())
-                .isActive(true)
-                .updatedAt(null)
-                .deletedAt(null)
-                .build();
     }
 
     private Car intitalizeCar() throws JsonProcessingException {
